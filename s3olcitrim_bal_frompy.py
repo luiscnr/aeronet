@@ -70,7 +70,7 @@ def md5(fname):
     return hash_md5.hexdigest()
 
 
-def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete,arg_outdir,arg_verbose):
+def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete, arg_outdir, arg_verbose):
     release_date = datetime.datetime.strptime(release_date_string, '%Y%m%d')
 
     # # Command line parsing
@@ -106,7 +106,6 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete,arg_ou
 
     w_bound_deg, s_bound_deg, e_bound_deg, n_bound_deg = [np.float_(west), np.float_(south), np.float_(east),
                                                           np.float_(north)]
-
 
     swcrn = Point(w_bound_deg, s_bound_deg)  # southwest corner
     necrn = Point(e_bound_deg, n_bound_deg)  # northeast corner
@@ -223,6 +222,10 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete,arg_ou
     else:
         lastcol = 1 + (lasttiecol * ncolmul)
 
+    # checking lastcol
+    if lastcol >= cols:
+        lastcol = cols - 1
+
     new_row = lastrow - firstrow + 1
     new_col = lastcol - firstcol + 1
     new_tie_row = lasttierow - firsttierow + 1
@@ -320,7 +323,8 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete,arg_ou
     for metadataObject in xfdumanifest.find('/metadataSection'):
         if metadataObject.attrib['ID'] == 'acquisitionPeriod':
             metadataObject.find(
-                'metadataWrap/xmlData/{%s}acquisitionPeriod/{%s}startTime' % (ns1, ns1)).text = trim_start_time.strftime(
+                'metadataWrap/xmlData/{%s}acquisitionPeriod/{%s}startTime' % (
+                    ns1, ns1)).text = trim_start_time.strftime(
                 "%Y-%m-%dT%H:%M:%S.%fZ")
             metadataObject.find(
                 'metadataWrap/xmlData/{%s}acquisitionPeriod/{%s}stopTime' % (ns1, ns1)).text = trim_stop_time.strftime(
