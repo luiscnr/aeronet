@@ -27,16 +27,16 @@ args = parser.parse_args()
 # file_sites = '/mnt/d/LUIS/OCTAC_WORK/BALTIC/site_list.ini'
 # source_dir = '/mnt/d/LUIS/OCTAC_WORK/BALTIC'
 
-ANET_SOURCE_DIR = '/store3/HYPERNETS/INSITU_AOC/NC/'
 
-source_dir = '/dst04-data1/OC/OLCI/trimmed_sources'
-file_sites = '/store3/HYPERNETS/INSITU_AOC/site_list.ini'
 
 from base.anet_nc_reader import AERONETReader
 
 
 def main():
     print('STARTED')
+    ANET_SOURCE_DIR = '/store3/HYPERNETS/INSITU_AOC/NC/'
+    source_dir = '/dst04-data1/OC/OLCI/trimmed_sources'
+    file_sites = '/store3/HYPERNETS/INSITU_AOC/site_list.ini'
     if args.sites_file:
         file_sites = args.sites_file
     site = None
