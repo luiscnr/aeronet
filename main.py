@@ -3,16 +3,14 @@ import os
 import sys
 
 import pandas as pd
-from base.anet_file import ANETFile
+
 from datetime import timedelta
 from datetime import datetime
-from base.anet_nc_reader import AERONETReader
+
 from thuillier import focomputation as foc
 import numpy as np
 import requests
 import tarfile
-
-
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -21,8 +19,12 @@ parser.add_argument("-d", "--debug", help="Debugging mode.", action="store_true"
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 parser.add_argument('-i', "--inputpath", help="Input (download) directory")
 parser.add_argument('-o', "--outputpath", help="Output directory")
-parser.add_argument('-t', "--thuillier", help="Thulier method",choices=['interp'])
+parser.add_argument('-t', "--thuillier", help="Thulier method", choices=['interp'])
 args = parser.parse_args()
+
+from base.anet_file import ANETFile
+from base.anet_nc_reader import AERONETReader
+
 
 def main():
     b = only_test()
@@ -35,13 +37,12 @@ def main():
     if dir_base is None or dir_output is None:
         print('Input and output path are required...')
 
-
-    #dir_base = '/home/lois/PycharmProjects/aeronets/DATA/INPUT_FILES/prueba'
-    #dir_output = '/home/lois/PycharmProjects/aeronets/DATA/OUTPUT_FILES'
+    # dir_base = '/home/lois/PycharmProjects/aeronets/DATA/INPUT_FILES/prueba'
+    # dir_output = '/home/lois/PycharmProjects/aeronets/DATA/OUTPUT_FILES'
     print('Downloading level 2')
     url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
     r = requests.get(url, allow_redirects=True)
-    file_out = os.path.join(dir_base,'LWN_Level20_All_Points_V3.tar.gz')
+    file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
     open(file_out, 'wb').write(r.content)
     print('Uncompressing level 2')
     file_tar = tarfile.open(file_out)
@@ -50,27 +51,28 @@ def main():
     print('Downloading level 1.5')
     url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
     r = requests.get(url, allow_redirects=True)
-    file_out = os.path.join(dir_base,'LWN_Level15_All_Points_V3.tar.gz')
+    file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
     open(file_out, 'wb').write(r.content)
     print('Uncompressing level 1.5')
     file_tar = tarfile.open(file_out)
     file_tar.extractall(dir_base)
 
-    dir_level15 = os.path.join(dir_base,'LWN','LWN15','ALL_POINTS')
-    dir_level20 = os.path.join(dir_base,'LWN','LWN20','ALL_POINTS')
+    dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
+    dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
     files_level20 = os.listdir(dir_level20)
     for f in files_level20:
-        f20 = os.path.join(dir_level20,f)
-        f15 = os.path.join(dir_level15,f.replace('lev20','lev15'))
-        site = f[f.find('_')+1:f.find('.')]
-        site = site[site.find('_')+1:len(site)]
-        print('DOING SITE:',site,'-----------------------------------------')
-        afilel20 = ANETFile(f20,None,False)
-        afilel15 = ANETFile(f15,None,False)
+        f20 = os.path.join(dir_level20, f)
+        f15 = os.path.join(dir_level15, f.replace('lev20', 'lev15'))
+        site = f[f.find('_') + 1:f.find('.')]
+        site = site[site.find('_') + 1:len(site)]
+        print('DOING SITE:', site, '-----------------------------------------')
+        afilel20 = ANETFile(f20, None, False)
+        afilel15 = ANETFile(f15, None, False)
         dfcombined = afilel20.check_and_append_df(afilel15)
-        aeronet_combined = ANETFile(None,dfcombined,True)
-        file_out = os.path.join(dir_output,f.replace('lev20','lev20_15')+'.nc')
+        aeronet_combined = ANETFile(None, dfcombined, True)
+        file_out = os.path.join(dir_output, f.replace('lev20', 'lev20_15') + '.nc')
         aeronet_combined.create_aeorent_ncfile(file_out)
+
 
 def only_test():
     print(['TEST'])
@@ -97,7 +99,17 @@ def only_test():
     # areader.extract_rrs()
     # areader.out_spectral_data()
     # #areader.plot_spectra(None)
+
+    from base.anet_nc_reader import AERONETReader
+    file_nc = '/mnt/d/LUIS/OCTAC_WORK/BALTIC/20020101_20220129_Gustav_Dalen_Tower.LWN_lev20_15.nc'
+    areader = AERONETReader(file_nc)
+    date_list = areader.get_available_dates('01-04-2016', None)
+    for d in date_list:
+        print(d)
+
     return True
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()

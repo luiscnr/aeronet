@@ -1,10 +1,12 @@
 from netCDF4 import Dataset
 from datetime import datetime
+
 from datetime import timedelta
 import numpy as np
 import pandas as pd
 from base.AERONET_Constants import AERONETConstants
 from matplotlib import pyplot as plt
+
 
 class AERONETReader:
     def __init__(self, file_path):
@@ -53,31 +55,28 @@ class AERONETReader:
             self.data_wl = data_wl[:, self.valid_wl]
         return self.data_wl
 
-    def extract_rrs(self,onlyvalid):
-        Lwn_fQ = self.extract_spectral_data('Lwn_f_Q',onlyvalid)
-        f0 = self.extract_spectral_data('F0',onlyvalid)
-        self.data_wl = np.divide(Lwn_fQ,f0)
+    def extract_rrs(self, onlyvalid):
+        Lwn_fQ = self.extract_spectral_data('Lwn_f_Q', onlyvalid)
+        f0 = self.extract_spectral_data('F0', onlyvalid)
+        self.data_wl = np.divide(Lwn_fQ, f0)
         self.param_wl = 'Rrs'
         return self.data_wl
 
-
     def extract_time_list(self):
         self.time_list = []
-        for r in range(self.row_ini,self.row_fin+1):
+        for r in range(self.row_ini, self.row_fin + 1):
             self.time_list.append(self.get_datetime(r))
         return self.time_list
-
-
 
     def out_spectral_data(self):
         nominal_wl = self.dataset['Nominal_Wavelenghts'][self.valid_wl]
         if self.time_list is None:
             self.extract_time_list()
-        ndata = (self.row_fin-self.row_ini)+1
+        ndata = (self.row_fin - self.row_ini) + 1
         nwl = len(nominal_wl)
         first_line = 'Wavelenght(nm)'
         for wl in nominal_wl:
-            first_line = first_line+';'+self.param_wl+'_'+str(wl)
+            first_line = first_line + ';' + self.param_wl + '_' + str(wl)
         print(first_line)
         for i in range(ndata):
             line = self.time_list[i].strftime('%d-%m-%Y %H:%M:%S')
@@ -117,7 +116,6 @@ class AERONETReader:
 
         return hfig
 
-
     # Get start and end row for a given date defined as: yyyy-mm-dd
     def get_indices_date(self, datestr):
         dateini = datetime.strptime(datestr, '%Y-%m-%d').replace(hour=0, minute=0, second=0)
@@ -135,15 +133,31 @@ class AERONETReader:
 
         return row_ini, row_fin
 
-    def get_datetime(self,row):
+    def get_datetime(self, row):
         timevalue = int(self.dataset['Time'][row])
         dt = self.ac.DATEREF + timedelta(seconds=timevalue)
         return dt
 
+    def get_date(self, row):
+        timevalue = int(self.dataset['Time'][row])
+        dt = self.ac.DATEREF + timedelta(seconds=timevalue)
+        return dt.date()
 
-    # No implemented yet
-    def get_available_dates(self):
-
-        timevar = self.dataset['Time']
-
-
+    # dateini and datefin: None or date with format dd-mm-yyyy
+    def get_available_dates(self,dateinis,datefins):
+        self.time_list = []
+        dtprev = datetime.now().date()
+        if dateinis is None:
+            dateini = datetime(2000,1,1).date()
+        else:
+            dateini = datetime.strptime(dateinis,'%Y-%m-%d').date()
+        if datefins is None:
+            datefin = datetime.now().date()
+        else:
+            datefin = datetime.strptime(datefins,'%Y-%m-%d').date()
+        for r in range(self.row_ini, self.row_fin + 1):
+            dt = self.get_date(r)
+            if dt != dtprev and dateini <= dt <= datefin:
+                self.time_list.append(dt)
+            dtprev = dt
+        return self.time_list
