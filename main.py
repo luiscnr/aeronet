@@ -1,7 +1,6 @@
 import argparse
 import os
 import tarfile
-
 import requests
 
 parser = argparse.ArgumentParser(
