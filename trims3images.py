@@ -175,8 +175,6 @@ def main():
                     if args.verbose:
                         print(f'Product does not contain site location: {site}')
                 if flag_location == 1:
-                    if args.verbose:
-                        print(f'Trimming product for site: {site}...')
                     if iszipped:
                         # path_temporal = '/mnt/c/data_luis/octac_work/bal_evolution/examples/unzip_folder'
                         with zp.ZipFile(path_prod, 'r') as zprod:
@@ -184,8 +182,9 @@ def main():
                                 print(f'Unziping to: {unzip_path}')
                             zprod.extractall(path=unzip_path)
                         path_prod_u = os.path.join(unzip_path, path_prod.split('/')[-1][0:-3] + 'SEN3')
-                        print(path_prod_u, os.path.exists(path_prod_u))
-                        prod_output = trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir_site, args.verbose)
+                        if args.verbose:
+                            print(f'Trimming product for site: {site}...')
+                        prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site, args.verbose)
                         sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
                         res_list.append(sval)
                     else:
@@ -195,20 +194,20 @@ def main():
 
                 if args.verbose:
                     print('-------------------------------------------------------------------')
-
+        if os.path.exists(unzip_path) and os.path.isdir(unzip_path):
+            if args.verbose:
+                print(f'Deleting temporary products in unzip folder {unzip_path} for date: {d}')
+            for folder in os.listdir(unzip_path):
+                delete_folder(os.path.join(unzip_path, folder))
+            if args.verbose:
+                print('-------------------------------------------------------------------')
     if args.createlist:
         file_list = os.path.join(out_dir_site, 'TrimList.txt')
         with open(file_list, 'w') as f:
             for row in res_list:
                 f.write(row)
                 f.write('\n')
-    if os.path.exists(unzip_path) and os.path.isdir(unzip_path):
-        if args.verbose:
-            print(f'Deleting temporary products in unzip folder: {unzip_path}')
-        for folder in os.listdir(unzip_path):
-            delete_folder(os.path.join(unzip_path,folder))
-        if args.verbose:
-            print('-------------------------------------------------------------------')
+
     print(f'COMPLETED. Trimmed files: {len(res_list)}')
 
 
