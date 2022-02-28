@@ -33,11 +33,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 release, release_date_string = '0.2', '20191124'
 # 20191124 - release_date_string
 
-import sys, os, datetime, argparse, yaml2, zipfile, tarfile, shutil, hashlib
+import datetime
+import hashlib
+import os
+import shutil
+import sys
+import tarfile
+import zipfile
+
 import numpy as np
-from netCDF4 import Dataset
 from lxml import etree
-from scipy.interpolate import griddata
+from netCDF4 import Dataset
 
 # unit of time
 onesecond = datetime.timedelta(seconds=1)

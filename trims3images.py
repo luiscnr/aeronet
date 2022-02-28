@@ -1,10 +1,11 @@
-import os.path
-import s3olcitrim_bal_frompy as trimtool
-import configparser
-import csv
-from netCDF4 import Dataset
-import numpy as np
 import argparse
+import configparser
+import os.path
+
+import numpy as np
+from netCDF4 import Dataset
+
+import s3olcitrim_bal_frompy as trimtool
 
 parser = argparse.ArgumentParser(
     description="Search and trim S3 Level 1B products around a in-situ location")
@@ -26,7 +27,6 @@ args = parser.parse_args()
 # ANET_SOURCE_DIR = '/mnt/d/LUIS/OCTAC_WORK/BALTIC'
 # file_sites = '/mnt/d/LUIS/OCTAC_WORK/BALTIC/site_list.ini'
 # source_dir = '/mnt/d/LUIS/OCTAC_WORK/BALTIC'
-
 
 
 from base.anet_nc_reader import AERONETReader
