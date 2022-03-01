@@ -1,6 +1,6 @@
 import argparse
 import configparser
-import os.path
+import os, stat
 
 import numpy as np
 from netCDF4 import Dataset
@@ -203,7 +203,9 @@ def main():
             for folder in os.listdir(unzip_path):
                 rmpath = os.path.join(unzip_path, folder)
                 print(f'Deleting: {rmpath}')
+                os.chmod(rmpath, stat.S_IWRITE)
                 os.rmdir(rmpath)
+                print('aqui')
 
             if args.verbose:
                 print('-------------------------------------------------------------------')
