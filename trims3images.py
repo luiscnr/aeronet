@@ -197,15 +197,9 @@ def main():
                     print('-------------------------------------------------------------------')
         if os.path.exists(unzip_path) and os.path.isdir(unzip_path):
             if args.verbose:
-                print(f'Deleting temporary products in unzip folder {unzip_path} for date: {d}')
+                print(f'Deleting temporary files in unzip folder {unzip_path} for date: {d}')
             for folder in os.listdir(unzip_path):
                 delete_folder_content(os.path.join(unzip_path, folder))
-            for folder in os.listdir(unzip_path):
-                rmpath = os.path.join(unzip_path, folder)
-                print(f'Deleting: {rmpath}')
-                os.chmod(rmpath, stat.S_IWRITE)
-                os.rmdir(rmpath)
-                print('aqui')
 
             if args.verbose:
                 print('-------------------------------------------------------------------')
@@ -215,6 +209,12 @@ def main():
             for row in res_list:
                 f.write(row)
                 f.write('\n')
+                
+    if os.path.exist(unzip_path) and os.path.isdir(unzip_path):
+        for folder in os.listdir(unzip_path):
+            rmpath = os.path.join(unzip_path, folder)
+            print(f'Deleting: {rmpath}')
+            os.rmdir(rmpath)
 
     print(f'COMPLETED. Trimmed files: {len(res_list)}')
 
