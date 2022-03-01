@@ -198,7 +198,10 @@ def main():
             if args.verbose:
                 print(f'Deleting temporary products in unzip folder {unzip_path} for date: {d}')
             for folder in os.listdir(unzip_path):
-                delete_folder(os.path.join(unzip_path, folder))
+                res = delete_folder_content(os.path.join(unzip_path, folder))
+                if res:
+                    os.rmdir(os.path.join(unzip_path,folder))
+
             if args.verbose:
                 print('-------------------------------------------------------------------')
     if args.createlist:
@@ -239,10 +242,15 @@ def find_row_column_from_lat_lon(latArray, lonArray, in_situ_lat, in_situ_lon):
     return r, c
 
 
-def delete_folder(path_folder):
+def delete_folder_content(path_folder):
+    res = True
     for f in os.listdir(path_folder):
-        os.remove(os.path.join(path_folder,f))
-    os.rmdir(path_folder)
+        try:
+            os.remove(os.path.join(path_folder,f))
+        except OSError:
+            res = False
+    return res
+
 
 
 # Press the green button in the gutter to run the script.
