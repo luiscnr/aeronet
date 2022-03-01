@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import os, stat
+import subprocess
 
 import numpy as np
 from netCDF4 import Dataset
@@ -78,7 +79,10 @@ def main():
 
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
-    out_dir_site = os.path.join(out_dir, site)
+    out_dir_site_t = os.path.join(out_dir, site)
+    if not os.path.exists(out_dir_site_t):
+        os.mkdir(out_dir_site_t)
+    out_dir_site = os.path.join(out_dir_site_t,'trim')
     if not os.path.exists(out_dir_site):
         os.mkdir(out_dir_site)
     if args.verbose:
@@ -209,12 +213,17 @@ def main():
             for row in res_list:
                 f.write(row)
                 f.write('\n')
-                
-    if os.path.exist(unzip_path) and os.path.isdir(unzip_path):
+
+    if os.path.exists(unzip_path) and os.path.isdir(unzip_path):
         for folder in os.listdir(unzip_path):
-            rmpath = os.path.join(unzip_path, folder)
-            print(f'Deleting: {rmpath}')
-            os.rmdir(rmpath)
+            path_delete = os.path.join(unzip_path, folder)
+            cmd = f'rm -r -f {path_delete}'
+            proc = subprocess.Popen(cmd, shell=True,stderr=subprocess.PIPE)
+            outs, errs = proc.communicate()
+            if errs:
+                for l in errs:
+                    if l:
+                        print(f'[ERROR] Deleting folder: {path_delete}  -> {l}')
 
     print(f'COMPLETED. Trimmed files: {len(res_list)}')
 
