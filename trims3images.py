@@ -184,7 +184,8 @@ def main():
                         path_prod_u = os.path.join(unzip_path, path_prod.split('/')[-1][0:-3] + 'SEN3')
                         if args.verbose:
                             print(f'Trimming product for site: {site}...')
-                        prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site, args.verbose)
+                        prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site,
+                                                         args.verbose)
                         sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
                         res_list.append(sval)
                     else:
@@ -198,9 +199,11 @@ def main():
             if args.verbose:
                 print(f'Deleting temporary products in unzip folder {unzip_path} for date: {d}')
             for folder in os.listdir(unzip_path):
-                res = delete_folder_content(os.path.join(unzip_path, folder))
-                if res:
-                    os.rmdir(os.path.join(unzip_path,folder))
+                delete_folder_content(os.path.join(unzip_path, folder))
+            for folder in os.listdir(unzip_path):
+                rmpath = os.path.join(unzip_path, folder)
+                print(f'Deleting: {rmpath}')
+                os.rmdir(rmpath)
 
             if args.verbose:
                 print('-------------------------------------------------------------------')
@@ -246,11 +249,10 @@ def delete_folder_content(path_folder):
     res = True
     for f in os.listdir(path_folder):
         try:
-            os.remove(os.path.join(path_folder,f))
+            os.remove(os.path.join(path_folder, f))
         except OSError:
             res = False
     return res
-
 
 
 # Press the green button in the gutter to run the script.
