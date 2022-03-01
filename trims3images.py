@@ -219,11 +219,8 @@ def main():
             path_delete = os.path.join(unzip_path, folder)
             cmd = f'rm -r -f {path_delete}'
             proc = subprocess.Popen(cmd, shell=True,stderr=subprocess.PIPE)
-            outs, errs = proc.communicate()
-            if errs:
-                for l in errs:
-                    if l:
-                        print(f'[ERROR] Deleting folder: {path_delete}  -> {l}')
+            proc.communicate()
+            
 
     print(f'COMPLETED. Trimmed files: {len(res_list)}')
 
