@@ -251,6 +251,10 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete, arg_o
     new_instance_id = '_trim_EXT_' + cicle_number + '_' + orbit_number  # _trim_BAL_046_022 ===> 17 chars
     trimprodname = preamble + tts1 + '_' + tts2 + '_' + ctts + '_' + new_instance_id + '_' + pname_suffix
     trimprod = os.path.join(outdir, trimprodname)
+    if os.path.exists(trimprod):
+        if arg_verbose:
+            print(f'[WARNING] Trim product: {trimprodname} already exists. Skyping...')
+        return trimprodname
     os.makedirs(trimprod, exist_ok=True)
     trimprod = os.path.abspath(trimprod)
 
@@ -358,6 +362,6 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete, arg_o
 
     # notify output file name
     if arg_verbose:
-        print("Trim product is: %s" % trimprodname)
+        print(f'[INFO]Trim product is: {trimprodname}')
 
     return trimprodname

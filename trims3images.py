@@ -24,7 +24,7 @@ parser.add_argument('-o', "--outputdir", help="Output directory", required=True)
 parser.add_argument('-z', "--unzip_path", help="Temporal unzip directory")
 parser.add_argument('-sd', "--startdate", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--enddate", help="The End Date - format YYYY-MM-DD ")
-parser.add_argument("-l", "--createlist", help="Create list", action="store_true")
+parser.add_argument("-l", "--list_files", help="Optional name for text file with a list of trimmed files (Default: None")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 
 args = parser.parse_args()
@@ -153,7 +153,9 @@ def main():
                 if prod.endswith('.zip') and prod.find('EFR') > 0 and zp.is_zipfile(path_prod):
                     iszipped = True
                     with zp.ZipFile(path_prod, 'r') as zprod:
-                        fname = path_prod.split('/')[-1][0:-3] + 'SEN3'
+                        fname = path_prod.split('/')[-1][0:-4]
+                        if not fname.endswith('SEN3'):
+                                fname = fname + '.SEN3'
                         geoname = os.path.join(fname, 'xfdumanifest.xml')
                         if geoname in zprod.namelist():
                             gc = zprod.open(geoname)
@@ -207,8 +209,8 @@ def main():
 
             if args.verbose:
                 print('-------------------------------------------------------------------')
-    if args.createlist:
-        file_list = os.path.join(out_dir_site, 'TrimList.txt')
+    if args.list_files:
+        file_list = os.path.join(out_dir_site, args.list_files)
         with open(file_list, 'w') as f:
             for row in res_list:
                 f.write(row)
@@ -220,7 +222,7 @@ def main():
             cmd = f'rm -r -f {path_delete}'
             proc = subprocess.Popen(cmd, shell=True,stderr=subprocess.PIPE)
             proc.communicate()
-            
+
 
     print(f'COMPLETED. Trimmed files: {len(res_list)}')
 
