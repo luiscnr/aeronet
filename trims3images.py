@@ -187,11 +187,12 @@ def main():
                             if args.verbose:
                                 print(f'Unziping to: {unzip_path}')
                             zprod.extractall(path=unzip_path)
-                        path_prod_u = os.path.join(unzip_path, path_prod.split('/')[-1][0:-3] + 'SEN3')
+                        path_prod_u = path_prod.split('/')[-1][0:-4]
+                        if not path_prod_u.endswith('.SEN3'):
+                            path_prod_u = path_prod_u + '.SEN3'
                         if args.verbose:
                             print(f'Trimming product for site: {site}...')
-                        prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site,
-                                                         args.verbose)
+                        prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site, args.verbose)
                         sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
                         res_list.append(sval)
                     else:
