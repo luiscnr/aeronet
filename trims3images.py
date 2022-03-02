@@ -244,6 +244,8 @@ def check_uncompressed_product(path_product, year, jday):
         Dataset(os.path.join(path_product, 'tie_geo_coordinates.nc'))
         return True
     except OSError:
+        if args.verbose:
+            print(f'[INFO] Checking path: {path_product}')
         name_dir = path_product.split(('/'))[-1]
         path_base = path_product.split(('/'))[-2]
         path_no_trimmed = os.path.join(path_base, 'NOTRIMMED')
@@ -251,6 +253,8 @@ def check_uncompressed_product(path_product, year, jday):
         path_jday = os.path.join(path_year, jday)
         path_end = os.path.join(path_jday, name_dir)
         os.makedirs(path_end)
+        if args.verbose:
+            print(f'[INFO] Path created: {path_end}')
         for f in os.listdir(path_product):
             shutil.copyfile(os.path.join(path_product, f), os.path.join(path_end, f))
         return False
