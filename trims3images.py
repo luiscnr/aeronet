@@ -145,12 +145,13 @@ def main():
                     print(f'PRODUCT: {path_prod}')
                 flag_location = -1
                 if prod.endswith('SEN3') and prod.find('EFR') > 0 and os.path.isdir(path_prod):
-                    path_geo = os.path.join(path_prod, 'geo_coordinates.nc')
-                    if os.path.exists(path_geo):
-                        dset = Dataset(path_geo)
-                        latArray = dset.variables['latitude'][:, :]
-                        lonArray = dset.variables['longitude'][:, :]
-                        flag_location = check_location(latArray, lonArray, insitu_lat, insitu_lon)
+
+                    # path_geo = os.path.join(path_prod, 'geo_coordinates.nc')
+                    # if os.path.exists(path_geo):
+                    #     dset = Dataset(path_geo)
+                    #     latArray = dset.variables['latitude'][:, :]
+                    #     lonArray = dset.variables['longitude'][:, :]
+                    #     flag_location = check_location(latArray, lonArray, insitu_lat, insitu_lon)
 
                 if prod.endswith('.zip') and prod.find('EFR') > 0 and zp.is_zipfile(path_prod):
                     iszipped = True
@@ -198,16 +199,21 @@ def main():
                         pcheck = check_uncompressed_product(path_prod_u, year, jday)
                         if not pcheck:
                             if args.verbose:
-                                print(f'[ERROR] Product can not be trimmed. Saved in no trimmed folder')
+                                print(f'[ERROR] Product can not be trimmed. Saved to NOTRIMMED folder')
                         else:
                             prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site,
                                                              args.verbose)
                             sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
                             res_list.append(sval)
                     else:
-                        prod_output = trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir_site, args.verbose)
-                        sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
-                        res_list.append(sval)
+                        pcheck = check_uncompressed_product(path_prod, year, jday)
+                        if not pcheck:
+                            if args.verbose:
+                                print(f'[ERROR] Product can not be trimmed. Saved to NOTRIMMED folder')
+                        else:
+                            prod_output = trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir_site, args.verbose)
+                            sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
+                            res_list.append(sval)
 
                 if args.verbose:
                     print('-------------------------------------------------------------------')
@@ -252,7 +258,11 @@ def check_uncompressed_product(path_product, year, jday):
         path_year = os.path.join(path_no_trimmed, year)
         path_jday = os.path.join(path_year, jday)
         path_end = os.path.join(path_jday, name_dir)
-        os.makedirs(path_end)
+        if not os.path.exists(path_end):
+            os.makedirs(path_end)
+
+
+
         if args.verbose:
             print(f'[INFO] Path created: {path_end}')
         for f in os.listdir(path_product):
