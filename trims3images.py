@@ -1,7 +1,8 @@
 import argparse
 import configparser
-import os, stat
+import os
 import subprocess
+import shutil
 
 import numpy as np
 from netCDF4 import Dataset
@@ -24,7 +25,8 @@ parser.add_argument('-o', "--outputdir", help="Output directory", required=True)
 parser.add_argument('-z', "--unzip_path", help="Temporal unzip directory")
 parser.add_argument('-sd', "--startdate", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--enddate", help="The End Date - format YYYY-MM-DD ")
-parser.add_argument("-l", "--list_files", help="Optional name for text file with a list of trimmed files (Default: None")
+parser.add_argument("-l", "--list_files",
+                    help="Optional name for text file with a list of trimmed files (Default: None")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 
 args = parser.parse_args()
@@ -82,7 +84,7 @@ def main():
     out_dir_site_t = os.path.join(out_dir, site)
     if not os.path.exists(out_dir_site_t):
         os.mkdir(out_dir_site_t)
-    out_dir_site = os.path.join(out_dir_site_t,'trim')
+    out_dir_site = os.path.join(out_dir_site_t, 'trim')
     if not os.path.exists(out_dir_site):
         os.mkdir(out_dir_site)
     if args.verbose:
@@ -155,7 +157,7 @@ def main():
                     with zp.ZipFile(path_prod, 'r') as zprod:
                         fname = path_prod.split('/')[-1][0:-4]
                         if not fname.endswith('SEN3'):
-                                fname = fname + '.SEN3'
+                            fname = fname + '.SEN3'
                         geoname = os.path.join(fname, 'xfdumanifest.xml')
                         if geoname in zprod.namelist():
                             gc = zprod.open(geoname)
@@ -190,13 +192,18 @@ def main():
                         path_prod_u = path_prod.split('/')[-1][0:-4]
                         if not path_prod_u.endswith('.SEN3'):
                             path_prod_u = path_prod_u + '.SEN3'
-                        path_prod_u = os.path.join(unzip_path,path_prod_u)
+                        path_prod_u = os.path.join(unzip_path, path_prod_u)
                         if args.verbose:
                             print(f'Trimming product for site: {site}...')
-                        print(path_prod_u)
-                        prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site, args.verbose)
-                        sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
-                        res_list.append(sval)
+                        pcheck = check_uncompressed_product(path_prod_u, year, jday)
+                        if not pcheck:
+                            if args.verbose:
+                                print(f'[ERROR] Product can not be trimmed. Saved in no trimmed folder')
+                        else:
+                            prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site,
+                                                             args.verbose)
+                            sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
+                            res_list.append(sval)
                     else:
                         prod_output = trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir_site, args.verbose)
                         sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
@@ -221,13 +228,32 @@ def main():
 
     if os.path.exists(unzip_path) and os.path.isdir(unzip_path):
         for folder in os.listdir(unzip_path):
+            if folder == 'NOTRIMMED':
+                continue
             path_delete = os.path.join(unzip_path, folder)
             cmd = f'rm -d -f {path_delete}'
-            proc = subprocess.Popen(cmd, shell=True,stderr=subprocess.PIPE)
+            proc = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE)
             proc.communicate()
 
-
     print(f'COMPLETED. Trimmed files: {len(res_list)}')
+
+
+# Check if netCDF4 is able to read nc file
+def check_uncompressed_product(path_product, year, jday):
+    try:
+        Dataset(os.path.join(path_product, 'tie_geo_coordinates.nc'))
+        return True
+    except OSError:
+        name_dir = path_product.split(('/'))[-1]
+        path_base = path_product.split(('/'))[-2]
+        path_no_trimmed = os.path.join(path_base, 'NOTRIMMED')
+        path_year = os.path.join(path_no_trimmed, year)
+        path_jday = os.path.join(path_year, jday)
+        path_end = os.path.join(path_jday, name_dir)
+        os.makedirs(path_end)
+        for f in os.listdir(path_product):
+            shutil.copyfile(os.path.join(path_product, f), os.path.join(path_end, f))
+        return False
 
 
 def check_location(latArray, lonArray, in_situ_lat, in_situ_lon):
