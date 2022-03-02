@@ -99,8 +99,6 @@ def main():
         file_nc = args.anet_nc_file
     else:
         if not site is None and os.path.exists(ANET_SOURCE_DIR):
-            # file_nc = '/store3/HYPERNETS/INSITU_AOC/NC/20020101_20220129_Gustav_Dalen_Tower.LWN_lev20_15.nc'
-            # file_nc = '/mnt/d/LUIS/OCTAC_WORK/BALTIC/20020101_20220129_Gustav_Dalen_Tower.LWN_lev20_15.nc'
             for f in os.listdir(ANET_SOURCE_DIR):
                 if f.find(site) > 0:
                     file_nc = os.path.join(ANET_SOURCE_DIR, f)
@@ -141,17 +139,19 @@ def main():
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)
                 iszipped = False
+                
                 if args.verbose:
                     print(f'PRODUCT: {path_prod}')
                 flag_location = -1
                 if prod.endswith('SEN3') and prod.find('EFR') > 0 and os.path.isdir(path_prod):
-
-                    # path_geo = os.path.join(path_prod, 'geo_coordinates.nc')
-                    # if os.path.exists(path_geo):
-                    #     dset = Dataset(path_geo)
-                    #     latArray = dset.variables['latitude'][:, :]
-                    #     lonArray = dset.variables['longitude'][:, :]
-                    #     flag_location = check_location(latArray, lonArray, insitu_lat, insitu_lon)
+                    geoname = os.path.join(path_prod, 'xfdumanifest.xml')
+                    if os.path.exists(geoname):
+                        fgeo = open(geoname, 'r')
+                        for line in fgeo:
+                            line_str = line.strip()
+                            if line_str.startswith('<gml:posList>'):
+                                flag_location = get_flag_location_from_line_geo(line_str, point_site)
+                        fgeo.close()
 
                 if prod.endswith('.zip') and prod.find('EFR') > 0 and zp.is_zipfile(path_prod):
                     iszipped = True
@@ -165,16 +165,7 @@ def main():
                             for line in gc:
                                 line_str = line.decode().strip()
                                 if line_str.startswith('<gml:posList>'):
-                                    clist = line_str[len('<gml:posList>'):line_str.index('</gml:posList>')].split()
-                                    coords = []
-                                    for i in range(0, len(clist), 2):
-                                        coord_here = (float(clist[i + 1]), float(clist[i]))
-                                        coords.append(coord_here)
-                                    polygon_image = Polygon(coords)  # create polygon
-                                    if point_site.within(polygon_image):
-                                        flag_location = 1
-                                    else:
-                                        flag_location = 0
+                                    flag_location = get_flag_location_from_line_geo(line_str, point_site)
                             gc.close()
 
                 if flag_location == -1:
@@ -211,7 +202,8 @@ def main():
                             if args.verbose:
                                 print(f'[ERROR] Product can not be trimmed. Saved to NOTRIMMED folder')
                         else:
-                            prod_output = trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir_site, args.verbose)
+                            prod_output = trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir_site,
+                                                             args.verbose)
                             sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
                             res_list.append(sval)
 
@@ -261,8 +253,6 @@ def check_uncompressed_product(path_product, year, jday):
         if not os.path.exists(path_end):
             os.makedirs(path_end)
 
-
-
         if args.verbose:
             print(f'[INFO] Path created: {path_end}')
         for f in os.listdir(path_product):
@@ -308,6 +298,27 @@ def delete_folder_content(path_folder):
     return res
 
 
+def get_flag_location_from_line_geo(line_str, point_site):
+    clist = line_str[len('<gml:posList>'):line_str.index('</gml:posList>')].split()
+    coords = []
+    for i in range(0, len(clist), 2):
+        coord_here = (float(clist[i + 1]), float(clist[i]))
+        coords.append(coord_here)
+    polygon_image = Polygon(coords)  # create polygon
+    if point_site.within(polygon_image):
+        flag_location = 1
+    else:
+        flag_location = 0
+    return flag_location
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
+
+# path_geo = os.path.join(path_prod, 'geo_coordinates.nc')
+# if os.path.exists(path_geo):
+#     dset = Dataset(path_geo)
+#     latArray = dset.variables['latitude'][:, :]
+#     lonArray = dset.variables['longitude'][:, :]
+#     flag_location = check_location(latArray, lonArray, insitu_lat, insitu_lon)
