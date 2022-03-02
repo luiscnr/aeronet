@@ -190,6 +190,7 @@ def main():
                         path_prod_u = path_prod.split('/')[-1][0:-4]
                         if not path_prod_u.endswith('.SEN3'):
                             path_prod_u = path_prod_u + '.SEN3'
+                        path_prod_u = os.path.join(unzip_path,path_prod_u)
                         if args.verbose:
                             print(f'Trimming product for site: {site}...')
                         prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site, args.verbose)
