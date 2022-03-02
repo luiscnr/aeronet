@@ -9,6 +9,7 @@ from netCDF4 import Dataset
 
 import s3olcitrim_bal_frompy as trimtool
 import zipfile as zp
+import tarfile as tp
 
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
@@ -139,7 +140,7 @@ def main():
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)
                 iszipped = False
-                
+                #istar = False
                 if args.verbose:
                     print(f'PRODUCT: {path_prod}')
                 flag_location = -1
@@ -167,6 +168,21 @@ def main():
                                 if line_str.startswith('<gml:posList>'):
                                     flag_location = get_flag_location_from_line_geo(line_str, point_site)
                             gc.close()
+
+                # if prod.endswith('.tar') and prod.find('EFR') > 0 and tp.is_tarfile(path_prod):
+                #     istar = True
+                #     with tp.TarFile(path_prod, 'r') as tprod:
+                #         fname = path_prod.split('/')[-1][0:-4]
+                #         if not fname.endswith('SEN3'):
+                #             fname = fname + '.SEN3'
+                #         geoname = os.path.join(fname, 'xfdumanifest.xml')
+                #         if geoname in tprod.getnames():
+                #             gc = tprod.open(geoname)
+                #             for line in gc:
+                #                 line_str = line.decode().strip()
+                #                 if line_str.startswith('<gml:posList>'):
+                #                     flag_location = get_flag_location_from_line_geo(line_str, point_site)
+                #             gc.close()
 
                 if flag_location == -1:
                     if args.verbose:
@@ -239,7 +255,9 @@ def main():
 # Check if netCDF4 is able to read nc file
 def check_uncompressed_product(path_product, year, jday):
     try:
-        Dataset(os.path.join(path_product, 'tie_geo_coordinates.nc'))
+        for f in os.listdir(path_product):
+            if f.endswith('nc'):
+                Dataset(os.path.join(path_product,f))
         return True
     except OSError:
         if args.verbose:
