@@ -219,7 +219,7 @@ def main():
     if os.path.exists(unzip_path) and os.path.isdir(unzip_path):
         for folder in os.listdir(unzip_path):
             path_delete = os.path.join(unzip_path, folder)
-            cmd = f'rm -r -f {path_delete}'
+            cmd = f'rm -d -f {path_delete}'
             proc = subprocess.Popen(cmd, shell=True,stderr=subprocess.PIPE)
             proc.communicate()
 
