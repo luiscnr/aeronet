@@ -142,7 +142,7 @@ def main():
                 if args.verbose:
                     print(f'PRODUCT: {path_prod}')
                 flag_location = -1
-                if prod.endswith('SEN3') and prod.find('EFR') > 0 and prod.find('BAL') > 0 and os.path.isdir(path_prod):
+                if prod.endswith('SEN3') and prod.find('EFR') > 0 and os.path.isdir(path_prod):
                     path_geo = os.path.join(path_prod, 'geo_coordinates.nc')
                     if os.path.exists(path_geo):
                         dset = Dataset(path_geo)
@@ -193,6 +193,7 @@ def main():
                         path_prod_u = os.path.join(unzip_path,path_prod_u)
                         if args.verbose:
                             print(f'Trimming product for site: {site}...')
+                        print(path_prod_u)
                         prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site, args.verbose)
                         sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
                         res_list.append(sval)
