@@ -247,7 +247,7 @@ def check_uncompressed_product(path_product, year, jday):
         if args.verbose:
             print(f'[INFO] Checking path: {path_product}')
         name_dir = path_product.split(('/'))[-1]
-        path_base = path_product.split(('/'))[-2]
+        path_base = os.path.dirname(path_product)
         path_no_trimmed = os.path.join(path_base, 'NOTRIMMED')
         path_year = os.path.join(path_no_trimmed, year)
         path_jday = os.path.join(path_year, jday)
