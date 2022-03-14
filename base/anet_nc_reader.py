@@ -1,7 +1,7 @@
 from netCDF4 import Dataset
 from datetime import datetime
-
 from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 from base.AERONET_Constants import AERONETConstants
@@ -20,6 +20,8 @@ class AERONETReader:
         self.row_ini = 0
         self.row_fin = self.ntimes - 1
         self.time_list = None
+        self.date_ini = None
+        self.date_fin = None
 
         # Variable to take spectral data
         self.param_wl = None
@@ -52,7 +54,7 @@ class AERONETReader:
         self.param_wl = var
         self.data_wl = self.dataset[var][self.row_ini:self.row_fin + 1]
         if onlyvalid:
-            self.data_wl = data_wl[:, self.valid_wl]
+            self.data_wl = self.data_wl[:, self.valid_wl]
         return self.data_wl
 
     def extract_rrs(self, onlyvalid):
@@ -64,8 +66,15 @@ class AERONETReader:
 
     def extract_time_list(self):
         self.time_list = []
+        self.date_fin = datetime(1970, 1, 1)
+        self.date_ini = datetime.now()
         for r in range(self.row_ini, self.row_fin + 1):
-            self.time_list.append(self.get_datetime(r))
+            dthere = self.get_datetime(r)
+            self.time_list.append(dthere)
+            if dthere < self.date_ini:
+                self.date_ini = dthere
+            if dthere > self.date_fin:
+                self.date_fin = dthere
         return self.time_list
 
     def out_spectral_data(self):
@@ -144,20 +153,25 @@ class AERONETReader:
         return dt.date()
 
     # dateini and datefin: None or date with format dd-mm-yyyy
-    def get_available_dates(self,dateinis,datefins):
+    def get_available_dates(self, dateinis, datefins):
         self.time_list = []
         dtprev = datetime.now().date()
         if dateinis is None:
-            dateini = datetime(2000,1,1).date()
+            dateini = datetime(2000, 1, 1).date()
         else:
-            dateini = datetime.strptime(dateinis,'%Y-%m-%d').date()
+            dateini = datetime.strptime(dateinis, '%Y-%m-%d').date()
         if datefins is None:
             datefin = datetime.now().date()
         else:
-            datefin = datetime.strptime(datefins,'%Y-%m-%d').date()
+            datefin = datetime.strptime(datefins, '%Y-%m-%d').date()
         for r in range(self.row_ini, self.row_fin + 1):
             dt = self.get_date(r)
             if dt != dtprev and dateini <= dt <= datefin:
                 self.time_list.append(dt)
             dtprev = dt
         return self.time_list
+
+    def get_time_ini_fin(self):
+        if self.date_ini is None or self.date_fin is None:
+            self.extract_time_list()
+        return self.date_ini, self.date_fin
