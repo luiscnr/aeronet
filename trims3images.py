@@ -26,6 +26,7 @@ parser.add_argument('-o', "--outputdir", help="Output directory", required=True)
 parser.add_argument('-z', "--unzip_path", help="Temporal unzip directory")
 parser.add_argument('-sd', "--startdate", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--enddate", help="The End Date - format YYYY-MM-DD ")
+parser.add_argument('-res', "--res_tag", help="Resolution tag (EFR, WFR)", )
 parser.add_argument("-l", "--list_files",
                     help="Optional name for text file with a list of trimmed files (Default: None")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
@@ -69,6 +70,11 @@ def main():
         insitu_lon = float(options[site]['Longitude'])
         if args.verbose:
             print(f'SITE: {site} latitude:{insitu_lat}, longitude:{insitu_lon}')
+
+    res_tag = 'EFR'
+    if args.res_tag:
+        res_tag = args.res_tag
+
     point_site = Point(insitu_lon, insitu_lat)
     w = insitu_lon - 0.15
     e = insitu_lon + 0.15
@@ -85,9 +91,18 @@ def main():
     out_dir_site_t = os.path.join(out_dir, site)
     if not os.path.exists(out_dir_site_t):
         os.mkdir(out_dir_site_t)
-    out_dir_site = os.path.join(out_dir_site_t, 'trim')
+    if res_tag == 'EFR':
+        out_dir_site = os.path.join(out_dir_site_t, 'trim')
+    elif res_tag == 'WFR':
+        out_dir_site_w = os.path.join(out_dir_site_t, 'WFR')
+        if not os.path.exists(out_dir_site_w):
+            os.mkdir(out_dir_site_w)
+        out_dir_site = os.path.join(out_dir_site_w, 'results')
+    else:
+        out_dir_site = os.path.join(out_dir_site_t, res_tag)
     if not os.path.exists(out_dir_site):
         os.mkdir(out_dir_site)
+
     if args.verbose:
         print(f'Output directory: {out_dir_site}')
 
@@ -140,11 +155,11 @@ def main():
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)
                 iszipped = False
-                #istar = False
+                istar = False
                 if args.verbose:
                     print(f'PRODUCT: {path_prod}')
                 flag_location = -1
-                if prod.endswith('SEN3') and prod.find('EFR') > 0 and os.path.isdir(path_prod):
+                if prod.endswith('SEN3') and prod.find(res_tag) > 0 and os.path.isdir(path_prod):
                     geoname = os.path.join(path_prod, 'xfdumanifest.xml')
                     if os.path.exists(geoname):
                         fgeo = open(geoname, 'r')
@@ -154,7 +169,7 @@ def main():
                                 flag_location = get_flag_location_from_line_geo(line_str, point_site)
                         fgeo.close()
 
-                if prod.endswith('.zip') and prod.find('EFR') > 0 and zp.is_zipfile(path_prod):
+                if prod.endswith('.zip') and prod.find(res_tag) > 0 and zp.is_zipfile(path_prod):
                     iszipped = True
                     with zp.ZipFile(path_prod, 'r') as zprod:
                         fname = path_prod.split('/')[-1][0:-4]
@@ -169,20 +184,21 @@ def main():
                                     flag_location = get_flag_location_from_line_geo(line_str, point_site)
                             gc.close()
 
-                # if prod.endswith('.tar') and prod.find('EFR') > 0 and tp.is_tarfile(path_prod):
-                #     istar = True
-                #     with tp.TarFile(path_prod, 'r') as tprod:
-                #         fname = path_prod.split('/')[-1][0:-4]
-                #         if not fname.endswith('SEN3'):
-                #             fname = fname + '.SEN3'
-                #         geoname = os.path.join(fname, 'xfdumanifest.xml')
-                #         if geoname in tprod.getnames():
-                #             gc = tprod.open(geoname)
-                #             for line in gc:
-                #                 line_str = line.decode().strip()
-                #                 if line_str.startswith('<gml:posList>'):
-                #                     flag_location = get_flag_location_from_line_geo(line_str, point_site)
-                #             gc.close()
+                if prod.endswith('.tar') and prod.find(res_tag) > 0 and tp.is_tarfile(path_prod):
+                    istar = True
+                    with tp.TarFile(path_prod, 'r') as tprod:
+                        fname = path_prod.split('/')[-1][0:-4]
+                        if not fname.endswith('SEN3'):
+                            fname = fname + '.SEN3'
+                        geoname = os.path.join(fname, 'xfdumanifest.xml')
+                        for member in tprod.getmembers():
+                            if member.name == geoname:
+                                tprod.extract(member, path=unzip_path)
+                                if os.path.exists(os.path.join(unzip_path, geoname)):
+                                    fgeo = open(os.path.join(unzip_path, geoname))
+                                    for line in fgeo:
+                                        if line.strip().startswith('<gml:posList>'):
+                                            flag_location = get_flag_location_from_line_geo(line.strip(), point_site)
 
                 if flag_location == -1:
                     if args.verbose:
@@ -197,6 +213,26 @@ def main():
                             if args.verbose:
                                 print(f'Unziping to: {unzip_path}')
                             zprod.extractall(path=unzip_path)
+                        path_prod_u = path_prod.split('/')[-1][0:-4]
+                        if not path_prod_u.endswith('.SEN3'):
+                            path_prod_u = path_prod_u + '.SEN3'
+                        path_prod_u = os.path.join(unzip_path, path_prod_u)
+                        if args.verbose:
+                            print(f'Trimming product for site: {site}...')
+                        pcheck = check_uncompressed_product(path_prod_u, year, jday)
+                        if not pcheck:
+                            if args.verbose:
+                                print(f'[ERROR] Product can not be trimmed. Saved to NOTRIMMED folder')
+                        else:
+                            prod_output = trimtool.make_trim(s, n, w, e, path_prod_u, None, False, out_dir_site,
+                                                             args.verbose)
+                            sval = path_prod + ';' + os.path.join(out_dir_site, prod_output)
+                            res_list.append(sval)
+                    elif istar:
+                        with tp.TarFile(path_prod, 'r') as tprod:
+                            if args.verbose:
+                                print(f'Untar to: {unzip_path}')
+                            tprod.extractall(path=unzip_path)
                         path_prod_u = path_prod.split('/')[-1][0:-4]
                         if not path_prod_u.endswith('.SEN3'):
                             path_prod_u = path_prod_u + '.SEN3'
@@ -257,7 +293,7 @@ def check_uncompressed_product(path_product, year, jday):
     try:
         for f in os.listdir(path_product):
             if f.endswith('nc'):
-                Dataset(os.path.join(path_product,f))
+                Dataset(os.path.join(path_product, f))
         return True
     except OSError:
         if args.verbose:
