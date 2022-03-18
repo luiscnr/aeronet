@@ -151,6 +151,7 @@ def main():
         year = d.strftime('%Y')
         jday = d.strftime('%j')
         source_dir_date = os.path.join(source_dir, year, jday)
+        print(source_dir_date)
         if os.path.exists(source_dir_date):
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)

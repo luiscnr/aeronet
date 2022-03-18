@@ -32,6 +32,8 @@ class AERONETReader:
     def prepare_data(self, row_ini, row_fin):
         self.row_ini = row_ini
         self.row_fin = row_fin
+        if row_ini == -1 and row_fin == -1:
+            return False
         ref_data = self.dataset['Lw'][row_ini:row_fin + 1]
         nvalues = (row_fin - row_ini) + 1
         self.valid_wl = np.zeros(self.nwl, dtype=bool)
@@ -42,12 +44,13 @@ class AERONETReader:
                 self.valid_wl[i] = True
             if 0 < nvalid < nvalues:
                 print('WARNING: different wl were detected')
-                return None
+                return False
+        return True
 
     # Get start and end row for a given date defined as: yyyy-mm-dd
     def prepare_data_fordate(self, datestr):
         rini, rfin = self.get_indices_date(datestr)
-        self.prepare_data(rini, rfin)
+        return self.prepare_data(rini, rfin)
 
     # Get data for a specific wl variable
     def extract_spectral_data(self, var, onlyvalid):

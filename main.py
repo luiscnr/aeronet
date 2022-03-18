@@ -16,9 +16,9 @@ from base.anet_file import ANETFile
 
 
 def main():
-    # b = only_test()
-    # if b:
-    #     return
+    b = only_test()
+    if b:
+        return
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
     dir_base = args.inputpath
     dir_output = args.outputpath
