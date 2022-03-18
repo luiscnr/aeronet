@@ -1,5 +1,6 @@
 import argparse
 import configparser
+import datetime
 import os
 import subprocess
 import shutil
@@ -120,12 +121,11 @@ def main():
                     file_nc = os.path.join(ANET_SOURCE_DIR, f)
                     break
     if file_nc is None:
-        print(f'ERROR: Aeronet NC file is not available')
-        return
-    if not os.path.exists(file_nc):
+        print(f'WARNING: Aeronet NC file is not available. Trimmming all the potential dates...')
+    if not file_nc is None and not os.path.exists(file_nc):
         print(f'ERROR: Aernote NC file: {file_nc} does not exist')
         return
-    if args.verbose:
+    if args.verbose and not file_nc is None:
         print(f'Aeronet NC file: {file_nc}')
 
     if args.sourcedir:
@@ -134,14 +134,30 @@ def main():
     if args.verbose:
         print(f'Source directory: {source_dir}')
 
-    areader = AERONETReader(file_nc)
+    areader = None
+    if not file_nc is None:
+        areader = AERONETReader(file_nc)
+
     start_date = '2016-04-01'
     end_date = None
     if args.startdate:
         start_date = args.startdate
     if args.enddate:
         end_date = args.enddate
-    date_list = areader.get_available_dates(start_date, end_date)
+    if not areader is None:
+        date_list = areader.get_available_dates(start_date, end_date)
+    else:
+        date_list = []
+        sdate = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date is None:
+            edate = datetime.datetime.now().date()
+        else:
+            edate = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+        date_here = sdate
+        while date_here <= edate:
+            date_list.append(date_here)
+            date_here = date_here + datetime.timedelta(hours=24)
+
     res_list = []
     for d in date_list:
         if args.verbose:
@@ -151,7 +167,6 @@ def main():
         year = d.strftime('%Y')
         jday = d.strftime('%j')
         source_dir_date = os.path.join(source_dir, year, jday)
-        print(source_dir_date)
         if os.path.exists(source_dir_date):
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)
