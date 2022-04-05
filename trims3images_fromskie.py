@@ -101,8 +101,10 @@ def main():
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)
                 sat_time = get_sat_time_from_fname(path_prod)
-                if args.verbose:
-                    print(f'[INFO] Prod: {prod} Sat time: {sat_time}')
+                if sat_time is None:
+                    print(f'[WARNING] Sat time for product: {prod} is not valid')
+                    continue
+
                 has_data_intime = skie_file.get_subdf(sat_time, sat_time, max_diff_time)
 
                 if args.verbose:
