@@ -1,7 +1,9 @@
 import argparse
+import datetime
 import os
 import tarfile
 import requests
+import subprocess
 
 parser = argparse.ArgumentParser(
     description="Generation of NC Aeronet Files using CSV files downloaded from the Aeronet web site")
@@ -16,7 +18,8 @@ from base.anet_file import ANETFile
 
 
 def main():
-    b = only_test()
+    #b = only_test()
+    b = False
     if b:
         return
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
@@ -26,25 +29,26 @@ def main():
     if dir_base is None or dir_output is None:
         print('Input and output path are required...')
 
-    # dir_base = '/home/lois/PycharmProjects/aeronets/DATA/INPUT_FILES/prueba'
-    # dir_output = '/home/lois/PycharmProjects/aeronets/DATA/OUTPUT_FILES'
-    print('Downloading level 2')
-    url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
-    r = requests.get(url, allow_redirects=True)
-    file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
-    open(file_out, 'wb').write(r.content)
-    print('Uncompressing level 2')
-    file_tar = tarfile.open(file_out)
-    file_tar.extractall(dir_base)
+    # #dir_base = '/home/lois/PycharmProjects/aeronets/DATA/INPUT_FILES/prueba'
+    # # dir_output = '/home/lois/PycharmProjects/aeronets/DATA/OUTPUT_FILES'
 
-    print('Downloading level 1.5')
-    url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
-    r = requests.get(url, allow_redirects=True)
-    file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
-    open(file_out, 'wb').write(r.content)
-    print('Uncompressing level 1.5')
-    file_tar = tarfile.open(file_out)
-    file_tar.extractall(dir_base)
+    # print('Downloading level 2')
+    # url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
+    # r = requests.get(url, allow_redirects=True)
+    # file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
+    # open(file_out, 'wb').write(r.content)
+    # print('Uncompressing level 2')
+    # file_tar = tarfile.open(file_out)
+    # file_tar.extractall(dir_base)
+    #
+    # print('Downloading level 1.5')
+    # url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
+    # r = requests.get(url, allow_redirects=True)
+    # file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
+    # open(file_out, 'wb').write(r.content)
+    # print('Uncompressing level 1.5')
+    # file_tar = tarfile.open(file_out)
+    # file_tar.extractall(dir_base)
 
     dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
     dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
@@ -54,17 +58,62 @@ def main():
         f15 = os.path.join(dir_level15, f.replace('lev20', 'lev15'))
         site = f[f.find('_') + 1:f.find('.')]
         site = site[site.find('_') + 1:len(site)]
-        print('DOING SITE:', site, '-----------------------------------------')
-        afilel20 = ANETFile(f20, None, False)
-        afilel15 = ANETFile(f15, None, False)
-        dfcombined = afilel20.check_and_append_df(afilel15)
-        aeronet_combined = ANETFile(None, dfcombined, True)
-        file_out = os.path.join(dir_output, f.replace('lev20', 'lev20_15') + '.nc')
-        aeronet_combined.create_aeorent_ncfile(file_out)
+
+        if site=='Gustav_Dalen_Tower':
+            print('DOING SITE:', site, '-----------------------------------------')
+            afilel20 = ANETFile(f20, None, False)
+            afilel15 = ANETFile(f15, None, False)
+            dfcombined = afilel20.check_and_append_df(afilel15)
+            aeronet_combined = ANETFile(None, dfcombined, True)
+            file_out = os.path.join(dir_output, f.replace('lev20', 'lev20_15') + '.nc')
+            aeronet_combined.create_aeorent_ncfile(file_out)
 
 
 def only_test():
     print(['TEST'])
+
+    folder = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/OLCI_VEIT_UPDATED/MDBs/MDB_S3A_OLCI_WFR_STANDARD_L2_HYPERNETS_VEIT_all'
+    for f in os.listdir(folder):
+        print(f)
+
+    # path_home = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/OLCI_VEIT_UPDATED/HYPSTAR/'
+    #
+    # cmd = 'scp -P 9022 hypstar@enhydra.naturalsciences.be:/waterhypernet/HYPSTAR/Processed/VEIT/'
+    #
+    # for m  in range(1,4):
+    #     for d in range(1,32):
+    #         if m==3 and d>20:
+    #             continue
+    #         try:
+    #             fecha = datetime.datetime(2022,m,d)
+    #         except:
+    #             continue
+    #         yearstr = fecha.strftime(('%Y'))
+    #         messtr = fecha.strftime('%m')
+    #         diastr = fecha.strftime('%d')
+    #         path_year = os.path.join(path_home,yearstr)
+    #         if not os.path.exists(path_year):
+    #             os.mkdir(path_year)
+    #         path_month = os.path.join(path_year, messtr)
+    #         if not os.path.exists(path_month):
+    #             os.mkdir(path_month)
+    #         path_day = os.path.join(path_month, diastr)
+    #         if not os.path.exists(path_day):
+    #             os.mkdir(path_day)
+    #
+    #         cmdfin = f'{cmd}{yearstr}/{messtr}/{diastr}/*L2* {path_day}'
+    #
+    #         print(cmdfin)
+    #         prog = subprocess.Popen(cmdfin, shell=True, stderr=subprocess.PIPE)
+    #         out, err = prog.communicate()
+    #         if err:
+    #             print(err)
+
+
+
+
+
+
     # wl = np.array([450.25, 480.5, 510.66, 620.145])
     # wlout = foc.get_F0_array(wl,'interp')
     # print(wlout,type(wlout))

@@ -36,6 +36,9 @@ class ANETFile:
             if not valid:
                 self.VALID_FILE = False
 
+            print(self.nws)
+            print(self.nominal_ws)
+
             if 'Data_Quality_Level' in self.completedf.columns:
                 self.quality_level = self.completedf.at[0, "Data_Quality_Level"]
 
@@ -53,6 +56,10 @@ class ANETFile:
 
 
             self.nwsvalid, self.valid_ws, check_valid = self.check_valid_ws()
+            print(self.nwsvalid)
+            print(self.valid_ws)
+            for i in range(self.nws):
+                print(self.nominal_ws[i],'->',self.valid_ws[i])
             if not check_valid:
                 self.VALID_FILE = False
             if self.nwsvalid < self.nws:
@@ -100,7 +107,9 @@ class ANETFile:
                         nominal_ws.append(int(str_ws[1:str_ws.find('nm')]))
             # else:
             #     print(c)
+
         nws = len(nominal_ws)
+
         valid = True
         for var in ws_var_names:
             nvar = (ws_var_names[var]['index_fin'] - ws_var_names[var]['index_ini']) + 1
