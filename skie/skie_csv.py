@@ -60,6 +60,8 @@ class SKIE_CSV():
             except ValueError:
                 print(f'[ERROR] {daterefstr} is not in the correct date format (%Y%m%d)')
                 return False
+        else:
+            print('ojo',type(dateref),dateref)
         if daterefstr not in self.dates.keys():
             print(f'[WARNING] Date: {daterefstr} is not available in the file')
             return False

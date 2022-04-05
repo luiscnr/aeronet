@@ -5,13 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7b9af9f7-2504-4fe8-8c1b-6f801bd04985" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/skie/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/skie/skie_csv.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/trims3images_fromskie.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/base/anet_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/base/anet_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trims3images.py" beforeDir="false" afterPath="$PROJECT_DIR$/trims3images.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skie/skie_csv.py" beforeDir="false" afterPath="$PROJECT_DIR$/skie/skie_csv.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trims3images_fromskie.py" beforeDir="false" afterPath="$PROJECT_DIR$/trims3images_fromskie.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

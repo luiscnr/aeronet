@@ -81,6 +81,9 @@ def main():
         print(f'[ERROR] Dates were not retrieved from SKIE csv file: {args.inputskie}. Check name of columnt time')
         return
 
+    # sat_time = dt(2019,9,16)
+    # dftal = skie_file.get_subdf(sat_time,sat_time,120)
+
 
     res_list = []
 
@@ -98,6 +101,8 @@ def main():
             for prod in os.listdir(source_dir_date):
                 path_prod = os.path.join(source_dir_date, prod)
                 sat_time = get_sat_time_from_fname(path_prod)
+                if args.verbose:
+                    print(f'[INFO] Sat time: {sat_time}')
                 has_data_intime = skie_file.get_subdf(sat_time, sat_time, max_diff_time)
 
                 if args.verbose:
