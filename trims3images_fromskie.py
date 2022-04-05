@@ -102,7 +102,7 @@ def main():
                 path_prod = os.path.join(source_dir_date, prod)
                 sat_time = get_sat_time_from_fname(path_prod)
                 if args.verbose:
-                    print(f'[INFO] Sat time: {sat_time}')
+                    print(f'[INFO] Prod: {prod} Sat time: {sat_time}')
                 has_data_intime = skie_file.get_subdf(sat_time, sat_time, max_diff_time)
 
                 if args.verbose:
