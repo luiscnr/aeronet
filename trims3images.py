@@ -60,7 +60,7 @@ def main():
         if args.site:
             site = args.site
         else:
-            site = 'Gustav_Dalen_Tower'
+            print(f'[ERROR] Site is not defined')
 
         if not os.path.exists(file_sites):
             print(f'ERROR: Sites file: {file_sites} does not exist')
@@ -86,6 +86,7 @@ def main():
         out_dir = args.outputdir
     else:
         print('ERROR: Output dir is required')
+        return
 
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
@@ -116,8 +117,11 @@ def main():
         file_nc = args.anet_nc_file
     else:
         if not site is None and os.path.exists(ANET_SOURCE_DIR):
+            site_search = site
+            if site=='VEIT':
+                site_search='Venise'
             for f in os.listdir(ANET_SOURCE_DIR):
-                if f.find(site) > 0:
+                if f.find(site_search) > 0:
                     file_nc = os.path.join(ANET_SOURCE_DIR, f)
                     break
     if file_nc is None:

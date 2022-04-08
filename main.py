@@ -18,8 +18,7 @@ from base.anet_file import ANETFile
 
 
 def main():
-    #b = only_test()
-    b = False
+    b = only_test()
     if b:
         return
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
@@ -72,9 +71,17 @@ def main():
 def only_test():
     print(['TEST'])
 
-    folder = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/OLCI_VEIT_UPDATED/MDBs/MDB_S3A_OLCI_WFR_STANDARD_L2_HYPERNETS_VEIT_all'
-    for f in os.listdir(folder):
-        print(f)
+    # folder = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/OLCI_VEIT_UPDATED/MDBs/MDB_S3A_OLCI_WFR_STANDARD_L2_HYPERNETS_VEIT_all'
+    # for f in os.listdir(folder):
+    #     print(f)
+
+    from skie.skie_csv import SKIE_CSV
+    path_skie = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/SKIE/Rflex_datadump_2019_2021_filterQin.csv'
+    skie_file = SKIE_CSV(path_skie)
+    skie_file.extract_wl_colnames()
+    print(skie_file.col_wl)
+
+
 
     # path_home = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/OLCI_VEIT_UPDATED/HYPSTAR/'
     #
