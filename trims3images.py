@@ -118,8 +118,8 @@ def main():
     else:
         if not site is None and os.path.exists(ANET_SOURCE_DIR):
             site_search = site
-            if site=='VEIT':
-                site_search='Venise'
+            if site == 'VEIT':
+                site_search = 'Venise'
             for f in os.listdir(ANET_SOURCE_DIR):
                 if f.find(site_search) > 0:
                     file_nc = os.path.join(ANET_SOURCE_DIR, f)
