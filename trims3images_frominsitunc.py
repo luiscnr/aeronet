@@ -343,8 +343,10 @@ def main():
                     if args.verbose:
                         print(f'PRODUCT: {path_prod}')
                     cgeo = CHECK_GEO()
+                    prod_started = False
                     if prod.endswith('SEN3') and prod.find(res_tag) > 0 and os.path.isdir(path_prod):
                         cgeo.start_polygon_image_from_folder_manifest_file(path_prod)
+                        prod_started = True
                     if prod.endswith('.zip') and prod.find(res_tag) > 0 and zp.is_zipfile(path_prod):
                         iszipped = True
                         if unzip_path is None:
@@ -358,9 +360,12 @@ def main():
                             continue
                         cgeo.start_polygon_image_from_tar_manifest_file(path_prod, unzip_path)
                     if iszipped or istar:
+                        prod_started = True
                         use_unzip_folder = True
                         global_use_unzip_folder = True
-
+                    if not prod_started:
+                        print(f'[WARNING] Product is not valid. Skipping...')
+                        continue
                     flag_location = cgeo.check_geo_area(south, north, west, east)
                     if flag_location == -1:
                         print(f'[WARNING] Polygon was not defined in the manifest file. Skipping...')
