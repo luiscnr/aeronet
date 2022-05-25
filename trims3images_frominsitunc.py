@@ -1,17 +1,15 @@
 import argparse
-
+import configparser
 import pandas as pd
-import numpy as np
 import zipfile as zp
 import tarfile as tp
-from netCDF4 import Dataset
 from datetime import datetime as dt
-from datetime import timedelta
-from base.flag_class import FLAG_LOIS
 from check_geo import CHECK_GEO
 import os
 import subprocess
 import s3olcitrim_bal_frompy as trimtool
+from insitu.nc_insitu_file import NCInsituFile
+from insitu.csv_insitu_file import CSVInsituFile
 
 parser = argparse.ArgumentParser(
     description="Search and trim S3 Level 1B products around a in-situ locations with valid data")
@@ -21,215 +19,16 @@ parser.add_argument('-i', "--inputfile", help="Input nc or csv file", required=T
 parser.add_argument('-s', "--source", help="Source directory", required=True)
 parser.add_argument('-o', "--output", help="Output directory (trim mode) or output file (dfcsv mode)", required=True)
 parser.add_argument('-z', "--unzip_path", help="Temporal unzip directory")
+parser.add_argument('-c', "--configfile", help="Configuration file")
 parser.add_argument('-res', "--res_tag", help="Resolution tag (EFR, WFR)")
 parser.add_argument('-sd', "--startdate", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--enddate", help="The End Date - format YYYY-MM-DD ")
+parser.add_argument('-vh', "--validhours", help="Valid min and max hours min-max")
 parser.add_argument("-l", "--list_files",
                     help="Optional name for text file with a list of trimmed files (Default: None")
 
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 args = parser.parse_args()
-
-
-class CSVInsituFile():
-    def __init__(self, csv_path):
-        self.dforig = pd.read_csv(csv_path, sep=';')
-        self.valid_dates = {}
-
-        # paramaters to be implemented using a configuration file
-        # self.date_variable = None #if date_variable and date_format are None, date/time are in the same variable
-        # self.date_format = None
-        # self.time_variable = 'date'
-        # self.time_format = '%Y-%m-%dT%H:%M'
-        # self.lat_variable = 'latitude'
-        # self.lon_variable = 'longitude'
-        # self.invalid_value = None
-        # self.variables = ['chl']
-
-        self.date_variable = 'Date'  # if date_variable and date_format are None, date/time are in the same variable
-        self.date_format = '%d/%m/%Y'
-        self.time_variable = 'Time'
-        self.time_format = '%H:%M:%S'
-        self.lat_variable = 'Lat'
-        self.lon_variable = 'Lon'
-        self.invalid_value = -9999
-        self.variables = ['CHLA']
-
-    def get_valid_dates(self, valid_hours, start_date, end_date):
-        if valid_hours is None:
-            valid_hours = [8, 14]
-        datearray = None
-        if self.date_variable is not None:
-            datearray = np.array(self.dforig.loc[:, self.date_variable])
-        timearray = np.array(self.dforig.loc[:, self.time_variable])
-        latarray = np.array(self.dforig.loc[:, self.lat_variable])
-        lonarray = np.array(self.dforig.loc[:, self.lon_variable])
-
-        # if self.flag_variable is not None:
-        #     flag = self.nc.variables[self.flag_variable]
-        #     flagclass = FLAG_LOIS(flag.flag_values, flag.flag_meanings)
-
-        for idx in range(len(timearray)):
-
-            time_here = None
-            if datearray is None:
-                time_here = dt.strptime(timearray[idx].strip(), self.time_format)
-            else:
-                format = f'{self.date_format}T{self.time_format}'
-                time_here_str = f'{datearray[idx].strip()}T{timearray[idx].strip()}'
-                time_here = dt.strptime(time_here_str, format)
-
-            if time_here is None:
-                print(f'[WARNING] Time is not valid. Skipping...')
-                continue
-
-            if time_here < start_date or time_here > end_date:
-                if args.verbose:
-                    # print(f'[WARNING] Time out of range. Skipping...')
-                    continue
-
-            # print(time_here,latarray[idx],lonarray[idx])
-
-            flag_valid = True
-            if self.invalid_value is not None:
-                flag_valid = False
-                for var in self.variables:
-                    vararray = self.dforig.loc[:, var]
-                    if vararray[idx] != self.invalid_value:
-                        flag_valid = True
-                        break
-            # if self.flag_variable is not None:
-            #     flag_value = flag[idx]
-            #     flag_valid = flagclass.is_any_flag_valid(self.flag_valid_list, flag_value)
-
-            if (valid_hours[0] <= time_here.hour <= valid_hours[1]) and flag_valid:
-                date_here = time_here.strftime('%Y-%m-%d')
-                hour_here = time_here.strftime('%H:%M:%S')
-                if not date_here in self.valid_dates.keys():
-                    self.valid_dates[date_here] = {
-                        hour_here: {
-                            'lat': float(latarray[idx]),
-                            'lon': float(lonarray[idx])
-                        }
-                    }
-                else:
-                    self.valid_dates[date_here][hour_here] = {
-                        'lat': float(latarray[idx]),
-                        'lon': float(lonarray[idx])
-                    }
-                for var in self.variables:
-                    vararray = self.dforig.loc[:, var]
-                    self.valid_dates[date_here][hour_here][var] = float(vararray[idx])
-        return self.valid_dates
-
-    def compute_geo_limits(self):
-        for d in self.valid_dates:
-            lat_min = 90
-            lat_max = -90
-            lon_min = 180
-            lon_max = -180
-            for h in self.valid_dates[d]:
-                if self.valid_dates[d][h]['lat'] < lat_min:
-                    lat_min = self.valid_dates[d][h]['lat']
-                if self.valid_dates[d][h]['lat'] > lat_max:
-                    lat_max = self.valid_dates[d][h]['lat']
-                if self.valid_dates[d][h]['lon'] < lon_min:
-                    lon_min = self.valid_dates[d][h]['lon']
-                if self.valid_dates[d][h]['lon'] > lon_max:
-                    lon_max = self.valid_dates[d][h]['lon']
-            self.valid_dates[d]['lat_min'] = lat_min
-            self.valid_dates[d]['lat_max'] = lat_max
-            self.valid_dates[d]['lon_min'] = lon_min
-            self.valid_dates[d]['lon_max'] = lon_max
-
-        return self.valid_dates
-
-
-class NCInsituFile():
-
-    def __init__(self, ncpath):
-        self.nc = Dataset(ncpath)
-        self.valid_dates = {}
-
-        ##parameters to be implemented using a configuration file
-        self.time_variable = 'TIME'
-        self.time_ref = dt(1950, 1, 1)
-        self.time_ref_units = 'days'
-
-        self.lat_variable = 'LATITUDE'
-        self.lon_variable = 'LONGITUDE'
-
-        self.variables = ['CPHL']
-        self.flag_variable = 'CPHL_QC'
-        self.flag_valid_list = ['good_data']
-
-    def get_valid_dates(self, valid_hours, start_date, end_date):
-        if valid_hours is None:
-            valid_hours = [8, 14]
-        time = self.nc.variables[self.time_variable]
-        lat = self.nc.variables[self.lat_variable]
-        lon = self.nc.variables[self.lon_variable]
-        if self.flag_variable is not None:
-            flag = self.nc.variables[self.flag_variable]
-            flagclass = FLAG_LOIS(flag.flag_values, flag.flag_meanings)
-
-        for idx in range(len(time)):
-            time_here = None
-            if self.time_ref_units == 'days':
-                time_here = self.time_ref + timedelta(days=float(time[idx]))
-            if time_here is None:
-                print(f'[WARNING] Time is not valid. Skipping...')
-                continue
-            if time_here < start_date or time_here > end_date:
-                if args.verbose:
-                    # print(f'[WARNING] Time out of range. Skipping...')
-                    continue
-
-            flag_valid = True
-            if self.flag_variable is not None:
-                flag_value = flag[idx]
-                flag_valid = flagclass.is_any_flag_valid(self.flag_valid_list, flag_value)
-
-            if (valid_hours[0] <= time_here.hour <= valid_hours[1]) and flag_valid:
-                date_here = time_here.strftime('%Y-%m-%d')
-                hour_here = time_here.strftime('%H:%M:%S')
-                if not date_here in self.valid_dates.keys():
-                    self.valid_dates[date_here] = {
-                        hour_here: {
-                            'lat': float(lat[idx]),
-                            'lon': float(lon[idx])
-                        }
-                    }
-                else:
-                    self.valid_dates[date_here][hour_here] = {
-                        'lat': float(lat[idx]),
-                        'lon': float(lon[idx])
-                    }
-                for var in self.variables:
-                    self.valid_dates[date_here][hour_here][var] = float(self.nc.variables[var][idx])
-        return self.valid_dates
-
-    def compute_geo_limits(self):
-        for d in self.valid_dates:
-            lat_min = 90
-            lat_max = -90
-            lon_min = 180
-            lon_max = -180
-            for h in self.valid_dates[d]:
-                if self.valid_dates[d][h]['lat'] < lat_min:
-                    lat_min = self.valid_dates[d][h]['lat']
-                if self.valid_dates[d][h]['lat'] > lat_max:
-                    lat_max = self.valid_dates[d][h]['lat']
-                if self.valid_dates[d][h]['lon'] < lon_min:
-                    lon_min = self.valid_dates[d][h]['lon']
-                if self.valid_dates[d][h]['lon'] > lon_max:
-                    lon_max = self.valid_dates[d][h]['lon']
-            self.valid_dates[d]['lat_min'] = lat_min
-            self.valid_dates[d]['lat_max'] = lat_max
-            self.valid_dates[d]['lon_min'] = lon_min
-            self.valid_dates[d]['lon_max'] = lon_max
-
-        return self.valid_dates
 
 
 def main():
@@ -288,15 +87,15 @@ def main():
     end_date = dt.now()
     if args.startdate:
         try:
-            start_date = dt.strptime(args.start_date, '%Y-%m-%d')
+            start_date = dt.strptime(args.startdate, '%Y-%m-%d')
         except ValueError:
-            print(f'[ERROR] Argument start_date sd: {args.start_date} is not valid')
+            print(f'[ERROR] Argument start_date sd: {args.startdate} is not valid')
             exit(-1)
     if args.enddate:
         try:
             end_date = args.enddate
         except ValueError:
-            print(f'[ERROR] Argument end_date ed: {args.start_date} is not valid')
+            print(f'[ERROR] Argument end_date ed: {args.enddate} is not valid')
             exit(-1)
 
     if args.verbose:
@@ -309,10 +108,21 @@ def main():
         ifobj = NCInsituFile(inputfile)
     if inputfile.endswith('csv'):
         ifobj = CSVInsituFile(inputfile)
+        if args.configfile:
+            ifobj.set_params_fromconfig_file(args.configfile)
 
-    ifobj.get_valid_dates(None, start_date, end_date)
+    valid_hours = None
+    if args.validhours:
+        try:
+            vdsplit = args.validhours.split('_')
+            valid_hours = [int(vdsplit[0]), int(vdsplit[1])]
+        except:
+            print(f'[WARNING] Argument valid_hours (vd) is not correct. Using defaults values (complete day: 0-24)')
+            pass
+
+    ifobj.get_valid_dates(valid_hours, start_date, end_date)
     if mode == 'trim':
-        valid_dates = ifobj.compute_geo_limits()
+        ifobj.compute_geo_limits()
     valid_dates = ifobj.valid_dates
 
     if mode == 'trim':
@@ -341,7 +151,8 @@ def main():
                     iszipped = False
                     istar = False
                     if args.verbose:
-                        print(f'PRODUCT: {path_prod}')
+                        print('-------------------------------------------------------------------')
+                        print(f'[INFO]PRODUCT: {path_prod}')
                     cgeo = CHECK_GEO()
                     prod_started = False
                     if prod.endswith('SEN3') and prod.find(res_tag) > 0 and os.path.isdir(path_prod):
@@ -384,8 +195,7 @@ def main():
                                                          args.verbose)
                         sval = path_prod + ';' + os.path.join(out_dir, prod_output)
                         res_list.append(sval)
-                    if args.verbose:
-                        print('-------------------------------------------------------------------')
+
             if use_unzip_folder:
                 if args.verbose:
                     print(f'Deleting temporary files in unzip folder {unzip_path} for date: {d}')
