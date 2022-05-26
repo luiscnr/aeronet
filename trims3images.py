@@ -27,7 +27,8 @@ parser.add_argument('-o', "--outputdir", help="Output directory", required=True)
 parser.add_argument('-z', "--unzip_path", help="Temporal unzip directory")
 parser.add_argument('-sd', "--startdate", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--enddate", help="The End Date - format YYYY-MM-DD ")
-parser.add_argument('-res', "--res_tag", help="Resolution tag (EFR, WFR)", )
+parser.add_argument('-res', "--res_tag", help="Resolution tag (EFR, WFR)",choices=['EFR','WFR'])
+parser.add_argument('-tag', "--tag",help="Tag to select some specific files")
 parser.add_argument("-l", "--list_files",
                     help="Optional name for text file with a list of trimmed files (Default: None")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
@@ -77,10 +78,22 @@ def main():
         res_tag = args.res_tag
 
     point_site = Point(insitu_lon, insitu_lat)
-    w = insitu_lon - 0.15
-    e = insitu_lon + 0.15
-    s = insitu_lat - 0.15
-    n = insitu_lat + 0.15
+
+    if site=='Irbe_Lighthouse':
+        w = 21.25
+        e = 22.25
+        s = 57.25
+        n = 58.25
+    elif site=='Helsinki_Lighthouse':
+        w = 24.5
+        e = 25.5
+        s = 59.5
+        n = 60.5
+    else:
+        w = insitu_lon - 0.15
+        e = insitu_lon + 0.15
+        s = insitu_lat - 0.15
+        n = insitu_lat + 0.15
 
     if args.outputdir:
         out_dir = args.outputdir
@@ -180,6 +193,11 @@ def main():
                     print(f'PRODUCT: {path_prod}')
                 flag_location = -1
                 if prod.endswith('SEN3') and prod.find(res_tag) > 0 and os.path.isdir(path_prod):
+                    if args.tag:
+                        if prod.find(args.tag)<0:
+                            if args.verbose:
+                                print(f'[INFO] Product does not contain tag. Skipping...')
+                            continue
                     geoname = os.path.join(path_prod, 'xfdumanifest.xml')
                     if os.path.exists(geoname):
                         fgeo = open(geoname, 'r')
@@ -190,6 +208,11 @@ def main():
                         fgeo.close()
 
                 if prod.endswith('.zip') and prod.find(res_tag) > 0 and zp.is_zipfile(path_prod):
+                    if args.tag:
+                        if prod.find(args.tag)<0:
+                            if args.verbose:
+                                print(f'[INFO] Product does not contain tag. Skipping...')
+                            continue
                     iszipped = True
                     with zp.ZipFile(path_prod, 'r') as zprod:
                         fname = path_prod.split('/')[-1][0:-4]
@@ -205,6 +228,11 @@ def main():
                             gc.close()
 
                 if prod.endswith('.tar') and prod.find(res_tag) > 0 and tp.is_tarfile(path_prod):
+                    if args.tag:
+                        if prod.find(args.tag)<0:
+                            if args.verbose:
+                                print(f'[INFO] Product does not contain tag. Skipping...')
+                            continue
                     istar = True
                     with tp.TarFile(path_prod, 'r') as tprod:
                         fname = path_prod.split('/')[-1][0:-4]
