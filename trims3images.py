@@ -89,6 +89,11 @@ def main():
         e = 25.5
         s = 59.5
         n = 60.5
+    elif site=='Gustav_Dalen_Tower':
+        w = 17
+        e = 18
+        s = 58
+        n = 59
     else:
         w = insitu_lon - 0.15
         e = insitu_lon + 0.15
