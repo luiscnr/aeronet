@@ -1,9 +1,9 @@
-
 import os
 
 from ftplib import FTP
 from netCDF4 import Dataset
 from datetime import datetime
+
 
 def main_test():
     # b = check_var()
@@ -178,6 +178,7 @@ def main_test():
     print('DONE')
 
     return True
+
 
 def get_products_and_datasets_dailynrt(ref):
     if ref == 48:
@@ -611,6 +612,7 @@ def get_info_complete_dataset_monthly(ftp_here, product, dataset, year_ini, year
     s = f'{avg_month},{tam_total}'
     return s
 
+
 def check_var():
     # file_name = 'CMEMS2_O2022001-plankton-bal-fr.nc'
     # dataset_name = 'cmems_obs-oc_bal_bgc-plankton_nrt_l3-olci-300m_P1D'
@@ -768,10 +770,24 @@ def check_var():
     return True
 
 
-def check_var_impl(file_name, product_name, dataset_name):
-    path_file = '/mnt/d/LUIS/OCTAC_WORK/EiSJuly2022/'
+def check_var_July2022():
+    file_pdf = '/mnt/c/DATA_LUIS/OCTAC_WORK/EiSNovember2022/LuisWork.csv'
+    import pandas as pd
+    df = pd.read_csv(file_pdf, sep=';')
+    for index, row in df.iterrows():
+        product = row['Product']
+        dataset = row['Dataset']
+        testfile = row['TestFile']
+        file = os.path.join('/mnt/c/DATA_LUIS/OCTAC_WORK/EiSNovember2022/TEST_FILES', dataset, testfile)
+        if os.path.exists(file):
+            check_var_impl(file,product,dataset)
 
-    file = os.path.join(path_file, file_name)
+
+
+def check_var_impl(file, product_name, dataset_name):
+    # path_file = '/mnt/d/LUIS/OCTAC_WORK/EiSJuly2022/'
+    #
+    # file = os.path.join(path_file, file_name)
 
     print(file, '------------------------------------------')
 
@@ -790,8 +806,8 @@ def check_var_impl(file_name, product_name, dataset_name):
     for var in dataset.variables:
         check_var = True
         variable = dataset.variables[var]
-        # if 'valid_min' in variable.ncattrs() and 'valid_max' in variable.ncattrs():
-        #     print('Variable: ', var, 'Valid min: ', variable.valid_min, ' Valid max: ', variable.valid_max)
+        if 'valid_min' in variable.ncattrs() and 'valid_max' in variable.ncattrs():
+            print('Variable: ', var, 'Valid min: ', variable.valid_min, ' Valid max: ', variable.valid_max)
         for dim in variable.dimensions:
             if not dim in lista_dim:
                 check_var = False
@@ -832,7 +848,7 @@ def checking_sizes():
             month_ini = start_date.month
             month_fin = end_date.month
 
-            if (sensor == 'multi' or sensor=='olci') and mode=='MY' and freq == 'd':
+            if (sensor == 'multi' or sensor == 'olci') and mode == 'MY' and freq == 'd':
                 svalue = retrieve_info_dataset_daily(mode, product, dataset, sensor, year_ini, month_ini, year_fin,
                                                      month_fin)
                 line_fin = f'{line.strip()},{svalue.strip()}'
@@ -983,3 +999,9 @@ def retrieve_info_dataset_monthly(mode, product, dataset, sensor, year_ini, year
     for tm in avg_months:
         svalue = f'{svalue},{tm}'
     return svalue
+
+def main():
+    check_var_July2022()
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+    main()

@@ -14,8 +14,8 @@ args = parser.parse_args()
 
 def main():
     ##TO CHECK REMAINING IDEPIX FILE
-    input_path = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/trim'
-    output_path = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/IDEPIX/results'
+    input_path = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Helsinki_Lighthouse/trim'
+    output_path = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Helsinki_Lighthouse/IDEPIX/results'
     b = check(input_path, output_path)
     if b:
         return

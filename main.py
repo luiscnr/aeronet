@@ -20,9 +20,14 @@ args = parser.parse_args()
 
 from base.anet_file import ANETFile
 
+def only_test_two():
+    file = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/CHLA_DATA/Baltic_CHLA_Valid.csv'
+    from insitu.csv_insitu_file import CSVInsituFile
+    ipv = CSVInsituFile(file)
+    return True
 
 def main():
-    b = only_test()
+    b = only_test_two()
     if b:
         return
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint

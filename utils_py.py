@@ -1,6 +1,7 @@
 import argparse
 import os
 from datetime import datetime as dt
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,7 @@ import pandas as pd
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep'])
+parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep','checkextractsdir'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -126,6 +127,49 @@ def main():
         dfnew = dforig[valid]
         dfnew.to_csv(args.output, sep=';')
         print(f'[INFO] New dataset without repeated records saved to: {args.output}')
+
+    if args.mode == 'checkextractsdir':
+        check_extracts_directories()
+
+def check_extracts_directories():
+    date_ini = dt(2016,4,29)
+    date_fin = dt(2021,12,31)
+    delta = date_fin -date_ini
+    ndays = delta.days +1
+    acnames = ['WFR', 'POLYMER', 'C2RCC', 'FUB', 'IDEPIX']
+    df = pd.DataFrame(index = list(range(ndays)),columns=['Date','WFR','POLYMER','C2RCC','FUB','IDEPIX','Total'])
+    for idx in range(ndays):
+        df.loc[idx,'Date'] = (date_ini + timedelta(days=idx)).strftime('%Y-%m-%d')
+        for ac in acnames:
+            df.loc[idx, ac] = 0
+        df.loc[idx,'Total'] = 0
+
+    platform = 'S3B'
+    dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower'
+
+    for ac in acnames:
+        dir_extracts = os.path.join(dir_base,ac,'extracts')
+        for name in os.listdir(dir_extracts):
+            if not name.startswith(platform):
+                continue
+            fpath = os.path.join(dir_extracts,name)
+            date_here = get_sat_time_from_fname(fpath)
+            idx = (date_here-date_ini).days
+            df.loc[idx,ac] = df.loc[idx,ac] + 1
+
+    df.to_csv(os.path.join(dir_base,f'ExtractsSummary_{platform}.csv'),sep=';')
+    print('DONE')
+
+def get_sat_time_from_fname(fname):
+    val_list = fname.split('_')
+    sat_time = None
+    for v in val_list:
+        try:
+            sat_time = dt.strptime(v, '%Y%m%dT%H%M%S')
+            break
+        except ValueError:
+            continue
+    return sat_time
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

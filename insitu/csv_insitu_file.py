@@ -36,7 +36,40 @@ class CSVInsituFile():
         self.lon_variable = 'LONGITUDE'
         self.invalid_value = -9999
         self.variables = ['CHLA']
+        self.flag_variables = ['SOURCE']
+        self.flag_info = self.start_flag_variables()
 
+    def start_flag_variables(self):
+        flag_info = {}
+        if self.flag_variables is not None:
+            for flag_var in self.flag_variables:
+                flag_array = np.array(self.dforig.loc[:, flag_var])
+                flag_meanings = list(np.unique(flag_array))
+                flag_values = list(range(1, len(flag_meanings) + 1))
+                flag_masks = str(flag_values[0])
+                flag_meanings_str = flag_meanings[0]
+                for idx in range(len(flag_meanings)):
+                    flag_masks = flag_masks + ' , ' + str(flag_values[idx])
+                    flag_meanings_str = flag_meanings_str + ' ' + flag_meanings[idx]
+                flag_info = {
+                    flag_var: {
+                        'flag_meanings': flag_meanings,
+                        'flag_values': flag_values,
+                        'flag_masks': flag_masks,
+                        'flag_meanings_str': flag_meanings_str
+                    }
+                }
+        return flag_info
+
+    def get_flag_value(self, flag_var, flag_meaning):
+        val = -1
+        flag_meanings = self.flag_info[flag_var]['flag_meanings']
+        if flag_meaning in flag_meanings:
+            idx = flag_meanings.index(flag_meaning)
+            if 0 <= idx < len(flag_meanings):
+                flag_values = self.flag_info[flag_var]['flag_values']
+                val = flag_values[idx]
+        return val
 
     def set_params_fromconfig_file(self, file_config):
         options = configparser.ConfigParser()
@@ -84,7 +117,7 @@ class CSVInsituFile():
         return str
 
     def get_valid_dates(self, valid_hours, start_date, end_date):
-        #print(self.lat_variable,self.lon_variable)
+        # print(self.lat_variable,self.lon_variable)
         if valid_hours is None:
             valid_hours = [0, 24]
         datearray = None
@@ -115,8 +148,6 @@ class CSVInsituFile():
             if time_here < start_date or time_here > end_date:
                 continue
 
-            # print(time_here,latarray[idx],lonarray[idx])
-
             flag_valid = True
             if self.invalid_value is not None:
                 flag_valid = False
@@ -125,9 +156,6 @@ class CSVInsituFile():
                     if vararray[idx] != self.invalid_value:
                         flag_valid = True
                         break
-            # if self.flag_variable is not None:
-            #     flag_value = flag[idx]
-            #     flag_valid = flagclass.is_any_flag_valid(self.flag_valid_list, flag_value)
 
             if (valid_hours[0] <= time_here.hour < valid_hours[1]) and flag_valid:
                 date_here = time_here.strftime('%Y-%m-%d')
@@ -147,6 +175,9 @@ class CSVInsituFile():
                 for var in self.variables:
                     vararray = self.dforig.loc[:, var]
                     self.valid_dates[date_here][hour_here][var] = float(vararray[idx])
+                for var in self.flag_variables:
+                    meaning = self.dforig.loc[idx,var]
+                    self.valid_dates[date_here][hour_here][var] = int(self.get_flag_value(var,meaning))
         return self.valid_dates
 
     def compute_geo_limits(self):
