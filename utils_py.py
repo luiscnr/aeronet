@@ -135,10 +135,12 @@ def main():
         get_dhusget_paths()
 
 def get_dhusget_paths():
-    finput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/OnlyWFR_S3B.csv'
-    dateminabs = dt(2018,5,29)
+    #finput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/OnlyWFR_S3B.csv'
+    finput = args.input
+    dateminabs = dt(2018,5,15)
     datemaxabs = dt(2018,12,31)
     path_output = '/dst04-data1/OC/OLCI/sources_baseline_2.23/'
+
     timecrontab = dt.now().replace(hour=14,minute=25,microsecond=0)
     with open(finput,'r') as fd:
         for line in fd:
