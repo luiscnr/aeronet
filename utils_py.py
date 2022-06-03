@@ -185,7 +185,7 @@ def get_dhusget_paths():
         fp.write('')
         for idx in range(1,len(lines)):
             fp.write('\n')
-            fp.write(lines[1])
+            fp.write(lines[idx])
 
 
     st = os.stat(foutput)
