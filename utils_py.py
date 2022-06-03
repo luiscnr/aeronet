@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import numpy as np
 import pandas as pd
+import stat
 
 parser = argparse.ArgumentParser(
     description="General utils")
@@ -141,7 +142,11 @@ def get_dhusget_paths():
     datemaxabs = dt(2018,12,31)
     path_output = '/dst04-data1/OC/OLCI/sources_baseline_2.23/'
 
-    timecrontab = dt.now().replace(hour=14,minute=25,microsecond=0)
+    #foutput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/doolci.sh'
+    foutput = args.output
+
+    lines = ['#! /bin/bash']
+
     with open(finput,'r') as fd:
         for line in fd:
             fpath = line.strip().split('/')[-1]
@@ -165,16 +170,32 @@ def get_dhusget_paths():
                     if os.path.getsize(file_check)>0:
                         nfiles = nfiles +1
             if nfiles==2:
-                print('-------------------------------------------------------------------------------------CONTINUE')
                 continue
 
-            crontabstr = f'{timecrontab.minute} {timecrontab.hour} {timecrontab.day} {timecrontab.month} * '
-            timecrontab = timecrontab + timedelta(minutes=35)
+
+
             cmdstart = f'/home/Luis.Gonzalezvilas/downloadolci/dhusget.sh -u luisgv -p GalaCoda2022! -m Sentinel-3 -i OLCI -S '
             cmdend = f' -T OL_1_EFR___ -c 9.25,53.25:30.25,65.85  -F \'timeliness:"Non Time Critical" AND filename:S3B*\' -o product -O '
-            cmd = f'{crontabstr}{cmdstart}{dateminstr} -E {datemaxstr}{cmdend}{path_output_here}'
             cmd = f'{cmdstart}{dateminstr} -E {datemaxstr}{cmdend}{path_output_here}'
-            print(cmd)
+            lines.append(cmd)
+
+    with open(foutput,'w') as fp:
+        fp.write(lines[0])
+        fp.write('\n')
+        fp.write('')
+        for idx in range(1,len(lines)):
+            fp.write('\n')
+            fp.write(lines[1])
+
+
+    st = os.stat(foutput)
+    os.chmod(foutput, st.st_mode | stat.S_IEXEC)
+
+    timecrontab = dt.now() + timedelta(minutes=3)
+    crontabstr = f'{timecrontab.minute} {timecrontab.hour} {timecrontab.day} {timecrontab.month} * '
+    cmd = f'{crontabstr} {foutput}'
+    print('[INFO] CRONTAB:')
+    print(cmd)
 
 def check_extracts_directories():
     date_ini = dt(2016, 4, 29)
