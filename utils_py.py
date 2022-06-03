@@ -161,7 +161,7 @@ def get_dhusget_paths():
             nfiles = 0
             for name in os.listdir(path_output_here):
                 if name.startswith(prename):
-                    file_check = os.path.join(path_output_here,file_check)
+                    file_check = os.path.join(path_output_here,name)
                     if os.path.getsize(file_check)>0:
                         nfiles = nfiles +1
             if nfiles==2:
