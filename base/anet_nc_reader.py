@@ -146,12 +146,14 @@ class AERONETReader:
         return row_ini, row_fin
 
     def get_datetime(self, row):
-        timevalue = int(self.dataset['Time'][row])
+        timevalue = float(self.dataset['Time'][row])
+        if row<10:
+            print('*****************',timevalue)
         dt = self.ac.DATEREF + timedelta(seconds=timevalue)
         return dt
 
     def get_date(self, row):
-        timevalue = int(self.dataset['Time'][row])
+        timevalue = float(self.dataset['Time'][row])
         dt = self.ac.DATEREF + timedelta(seconds=timevalue)
         return dt.date()
 

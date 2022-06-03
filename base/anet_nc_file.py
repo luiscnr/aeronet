@@ -1,3 +1,5 @@
+import datetime
+
 from netCDF4 import Dataset
 
 class ANETNCFile:
@@ -32,9 +34,12 @@ class ANETNCFile:
         self.nc.createDimension(self.dimension_names[1],nws)
 
     def add_time_variable(self,array):
-        time = self.nc.createVariable('Time', 'f4', ('TimeIndex',), fill_value=-999, zlib=True, complevel=6)
+        time = self.nc.createVariable('Time', 'f8', ('TimeIndex',), fill_value=-999, zlib=True, complevel=6)
         time.units = "Seconds since 1970-1-1"
         time[:] = array
+
+
+
 
 
     def add_nominalws_variable(self,array):

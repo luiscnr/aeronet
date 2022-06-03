@@ -36,8 +36,8 @@ class ANETFile:
             if not valid:
                 self.VALID_FILE = False
 
-            print(self.nws)
-            print(self.nominal_ws)
+            # print(self.nws)
+            # print(self.nominal_ws)
 
             if 'Data_Quality_Level' in self.completedf.columns:
                 self.quality_level = self.completedf.at[0, "Data_Quality_Level"]
@@ -56,10 +56,10 @@ class ANETFile:
 
 
             self.nwsvalid, self.valid_ws, check_valid = self.check_valid_ws()
-            print(self.nwsvalid)
-            print(self.valid_ws)
-            for i in range(self.nws):
-                print(self.nominal_ws[i],'->',self.valid_ws[i])
+            # print(self.nwsvalid)
+            # print(self.valid_ws)
+            # for i in range(self.nws):
+            #     print(self.nominal_ws[i],'->',self.valid_ws[i])
             if not check_valid:
                 self.VALID_FILE = False
             if self.nwsvalid < self.nws:
@@ -162,7 +162,7 @@ class ANETFile:
     # Time stamps as seconds from 1-1-1970
     def get_time_as_float_array(self):
         time_array = np.arange(self.ntimes, dtype=float)
-        dtref = datetime(1970, 1, 1, 0, 0, 0)
+        dtref = datetime(1970, 1, 1, 0, 0, 0).replace(microsecond=0)
         for irow in range(self.ntimes):
             time_array[irow] = (self.get_date_time(irow) - dtref).total_seconds()
         return time_array
