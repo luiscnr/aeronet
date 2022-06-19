@@ -10,7 +10,7 @@ import stat
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir','dhusget'])
+parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -135,58 +135,56 @@ def main():
     if args.mode == 'dhusget':
         get_dhusget_paths()
 
+
 def get_dhusget_paths():
-    #finput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/OnlyWFR_S3B.csv'
+    # finput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/OnlyWFR_S3B.csv'
     finput = args.input
-    dateminabs = dt(2018,5,15)
-    datemaxabs = dt(2018,12,31)
+    dateminabs = dt(2018, 5, 15)
+    datemaxabs = dt(2018, 12, 31)
     path_output = '/dst04-data1/OC/OLCI/sources_baseline_2.23/'
 
-    #foutput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/doolci.sh'
+    # foutput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/doolci.sh'
     foutput = args.output
 
     lines = ['#! /bin/bash']
 
-    with open(finput,'r') as fd:
+    with open(finput, 'r') as fd:
         for line in fd:
             fpath = line.strip().split('/')[-1]
             lpath = fpath.split('_')
-            datehere = dt.strptime(lpath[7],'%Y%m%dT%H%M%S')
-            if datehere<dateminabs or datehere>datemaxabs:
+            datehere = dt.strptime(lpath[7], '%Y%m%dT%H%M%S')
+            if datehere < dateminabs or datehere > datemaxabs:
                 continue
-            datemin = datehere-timedelta(hours=1)
-            datemax = datehere+timedelta(hours=1)
+            datemin = datehere - timedelta(hours=1)
+            datemax = datehere + timedelta(hours=1)
             dateminstr = f'{datemin.isoformat()}Z'
             datemaxstr = f'{datemax.isoformat()}Z'
             yearstr = datehere.strftime('%Y')
             jday = datehere.strftime('%j')
-            path_output_here = os.path.join(path_output,yearstr,jday)
+            path_output_here = os.path.join(path_output, yearstr, jday)
             dateprename = datehere.strftime('%Y%m%d')
             prename = f'S3B_OL_1_EFR____{dateprename}'
             nfiles = 0
             for name in os.listdir(path_output_here):
                 if name.startswith(prename):
-                    file_check = os.path.join(path_output_here,name)
-                    if os.path.getsize(file_check)>0:
-                        nfiles = nfiles +1
-            if nfiles==2:
+                    file_check = os.path.join(path_output_here, name)
+                    if os.path.getsize(file_check) > 0:
+                        nfiles = nfiles + 1
+            if nfiles == 2:
                 continue
-
-
 
             cmdstart = f'/home/Luis.Gonzalezvilas/downloadolci/dhusget.sh -u luisgv -p GalaCoda2022! -m Sentinel-3 -i OLCI -S '
             cmdend = f' -T OL_1_EFR___ -c 9.25,53.25:30.25,65.85  -F \'timeliness:"Non Time Critical" AND filename:S3B*\' -o product -O '
             cmd = f'{cmdstart}{dateminstr} -E {datemaxstr}{cmdend}{path_output_here}'
             lines.append(cmd)
 
-    with open(foutput,'w') as fp:
+    with open(foutput, 'w') as fp:
         fp.write(lines[0])
         fp.write('\n')
         fp.write('')
-        for idx in range(1,len(lines)):
+        for idx in range(1, len(lines)):
             fp.write('\n')
             fp.write(lines[idx])
-
 
     st = os.stat(foutput)
     os.chmod(foutput, st.st_mode | stat.S_IEXEC)
@@ -196,6 +194,7 @@ def get_dhusget_paths():
     cmd = f'{crontabstr} {foutput}'
     print('[INFO] CRONTAB:')
     print(cmd)
+
 
 def check_extracts_directories():
     date_ini = dt(2016, 4, 29)
@@ -230,6 +229,7 @@ def check_extracts_directories():
     df.to_csv(os.path.join(dir_base, f'ExtractsSummaryN_{platform}.csv'), sep=';')
 
     only_wfr = []
+    dates_only_wfr = []
     dir_extracts = os.path.join(dir_base, 'WFR', 'extracts')
     for name in os.listdir(dir_extracts):
         if not name.startswith(platform):
@@ -239,9 +239,16 @@ def check_extracts_directories():
         idx = (date_here - date_ini).days
         if df.loc[idx, 'Total'] == 1:
             only_wfr.append(fpath)
-    flist = os.path.join(dir_base,f'OnlyWFR_{platform}.csv')
-    fop = open(flist,'w')
+            dates_only_wfr.append(date_here.strftime('%Y-%m-%d'))
+    flist = os.path.join(dir_base, f'OnlyWFR_{platform}.csv')
+    ftrimlist = os.path.join(dir_base, f'TrimDates_{platform}.csv')
+    fop = open(flist, 'w')
     for line in only_wfr:
+        fop.write(line)
+        fop.write('\n')
+    fop.close()
+    fop = open(ftrimlist, 'w')
+    for line in dates_only_wfr:
         fop.write(line)
         fop.write('\n')
     fop.close()

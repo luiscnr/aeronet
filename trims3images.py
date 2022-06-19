@@ -29,8 +29,8 @@ parser.add_argument('-sd', "--startdate", help="The Start Date - format YYYY-MM-
 parser.add_argument('-ed', "--enddate", help="The End Date - format YYYY-MM-DD ")
 parser.add_argument('-res', "--res_tag", help="Resolution tag (EFR, WFR)",choices=['EFR','WFR'])
 parser.add_argument('-tag', "--tag",help="Tag to select some specific files")
-parser.add_argument("-l", "--list_files",
-                    help="Optional name for text file with a list of trimmed files (Default: None")
+parser.add_argument('-ld',"--list_dates", help="Text file with a list of dates - format YYYY-MM-DD")
+parser.add_argument("-l", "--list_files", help="Optional name for text file with a list of trimmed files (Default: None")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 
 args = parser.parse_args()
@@ -166,19 +166,41 @@ def main():
         start_date = args.startdate
     if args.enddate:
         end_date = args.enddate
-    if not areader is None:
-        date_list = areader.get_available_dates(start_date, end_date)
-    else:
-        date_list = []
+    if args.list_dates: ##date_list is directly extracted from a list
+        fdates = args.list_dates
+        if not os.path.exists(fdates):
+            print(f'[ERROR] File with list of dates: {fdates} does not exist')
+            return
         sdate = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
         if end_date is None:
             edate = datetime.datetime.now().date()
         else:
             edate = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
-        date_here = sdate
-        while date_here <= edate:
-            date_list.append(date_here)
-            date_here = date_here + datetime.timedelta(hours=24)
+        flist = open(fdates,'r')
+        date_list = []
+        for line in flist:
+            try:
+                datel = datetime.datetime.strptime(line.strip(),'%Y-%m-%d').date()
+                if datel>=sdate and datel<=edate:
+                    date_list.append(datel)
+            except:
+                print(f'[WARNING] Date: {line.strip()} is not in the correct format YYYY-mm-dd')
+                continue
+        flist.close()
+    else:
+        if not areader is None:
+            date_list = areader.get_available_dates(start_date, end_date)
+        else:
+            date_list = []
+            sdate = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            if end_date is None:
+                edate = datetime.datetime.now().date()
+            else:
+                edate = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+            date_here = sdate
+            while date_here <= edate:
+                date_list.append(date_here)
+                date_here = date_here + datetime.timedelta(hours=24)
 
     res_list = []
     for d in date_list:
