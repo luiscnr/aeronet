@@ -10,7 +10,7 @@ import stat
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget'])
+parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -135,12 +135,28 @@ def main():
     if args.mode == 'dhusget':
         get_dhusget_paths()
 
+    if args.mode == 'printscp':
+        print_scp()
+
+def print_scp():
+    dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/INPUT_SOURCES/WFR_DOWNLOAD/pending'
+    dir_output = '/dst04-data1/OC/OLCI/sources_baseline_3.01/bal'
+    print('#!/bin/bash')
+    for name in os.listdir(dir_base):
+        if not name.endswith('.zip'):
+            continue
+        sat_time = get_sat_time_from_fname(name)
+        year_path = os.path.join(dir_output,sat_time.strftime('%Y'))
+        path_out = os.path.join(year_path,sat_time.strftime('%j'))
+        path_in = os.path.join(dir_base,name)
+        cmd = f'scp {path_in} Luis.Gonzalezvilas@artov.ismar.cnr.it@192.168.10.94:{path_out}'
+        print(cmd)
 
 def get_dhusget_paths():
     # finput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/OnlyWFR_S3B.csv'
     finput = args.input
-    dateminabs = dt(2018, 5, 15)
-    datemaxabs = dt(2018, 12, 31)
+    dateminabs = dt(2016, 1, 11)
+    datemaxabs = dt(2022, 12, 31)
     path_output = '/dst04-data1/OC/OLCI/sources_baseline_2.23/'
 
     # foutput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/doolci.sh'
@@ -209,8 +225,10 @@ def check_extracts_directories():
             df.loc[idx, ac] = 0
         df.loc[idx, 'Total'] = 0
 
-    platform = 'S3B'
+    platform = 'S3A'
     dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower'
+    #dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Helsinki_Lighthouse'
+    #dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Irbe_Lighthouse'
 
     for ac in acnames:
         dir_extracts = os.path.join(dir_base, ac, 'extracts')
