@@ -32,10 +32,14 @@ def main():
         w = 5
         e = 35
     elif geo_coords == 'BAL_GDT':
-        s = 58
-        n = 59
-        w = 17
-        e = 18
+        # s = 58
+        # n = 59
+        # w = 17
+        # e = 18
+        s = 58.4
+        n = 58.8
+        w = 17.2
+        e = 17.8
         insitu_lat = 58.59417
         insitu_lon =  17.46683
     elif geo_coords == 'BAL_HLH':
