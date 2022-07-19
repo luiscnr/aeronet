@@ -37,7 +37,7 @@ def main():
         w = 17
         e = 18
         insitu_lat = 58.59417
-        insitu_lon =  17.46683
+        insitu_lon = 17.46683
     elif geo_coords == 'BAL_HLH':
         s = 59.5
         n = 60.5
@@ -58,8 +58,8 @@ def main():
         n = float(geo_list[1].strip())
         w = float(geo_list[2].strip())
         e = float(geo_list[3].strip())
-        insitu_lon = (w+e)/2
-        insitu_lat = (s+n)/2
+        insitu_lon = (w + e) / 2
+        insitu_lat = (s + n) / 2
 
     point_site = Point(insitu_lon, insitu_lat)
     out_dir = args.outputdir
@@ -78,15 +78,15 @@ def main():
                 wce = args.wce
             file = open(args.list_dates)
             for line in file:
-                date_here = datetime.datetime.strptime(line.strip(),'%Y-%m-%d')
-                path_year = os.path.join(args.sourcedir,date_here.strftime('%Y'))
-                path_jday = os.path.join(path_year,date_here.strftime('%j'))
+                date_here = datetime.datetime.strptime(line.strip(), '%Y-%m-%d')
+                path_year = os.path.join(args.sourcedir, date_here.strftime('%Y'))
+                path_jday = os.path.join(path_year, date_here.strftime('%j'))
                 if os.path.exists(path_jday):
                     for name in os.listdir(path_jday):
-                        path_prod = os.path.join(path_jday,name)
-                        if path_prod.find(wce)>0:
-                            flag_location = check_prod_site(path_prod,point_site)
-                            if flag_location==1:
+                        path_prod = os.path.join(path_jday, name)
+                        if path_prod.find(wce) > 0:
+                            flag_location = check_prod_site(path_prod, point_site)
+                            if flag_location == 1:
                                 print(f'[INFO] Trimming product: {path_prod}')
                                 trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
                             else:
@@ -95,7 +95,7 @@ def main():
                     print(f'[WARNING] Path for date: {line} -> {path_jday} was not found in source directory')
 
 
-def check_prod_site(path_prod,point_site):
+def check_prod_site(path_prod, point_site):
     flag_location = 0
     if path_prod.endswith('SEN3') and os.path.isdir(path_prod):
         geoname = os.path.join(path_prod, 'xfdumanifest.xml')
@@ -121,6 +121,7 @@ def check_prod_site(path_prod,point_site):
                 gc.close()
     return flag_location
 
+
 def get_flag_location_from_line_geo(line_str, point_site):
     clist = line_str[len('<gml:posList>'):line_str.index('</gml:posList>')].split()
     coords = []
@@ -133,6 +134,7 @@ def get_flag_location_from_line_geo(line_str, point_site):
     else:
         flag_location = 0
     return flag_location
+
 
 def check(input_path, output_path):
     for file in os.listdir(input_path):

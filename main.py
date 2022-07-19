@@ -69,7 +69,7 @@ def main():
         site = f[f.find('_') + 1:f.find('.')]
         site = site[site.find('_') + 1:len(site)]
 
-        if site == 'Venise':
+        if site == 'Gloria':
             print('DOING SITE:', site, '-----------------------------------------')
             afilel20 = ANETFile(f20, None, False)
             afilel15 = ANETFile(f15, None, False)

@@ -30,6 +30,16 @@ parser.add_argument("-l", "--list_files",
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 args = parser.parse_args()
 
+def get_sat_time_from_fname(fname):
+    val_list = fname.split('_')
+    sat_time = None
+    for v in val_list:
+        try:
+            sat_time = dt.strptime(v, '%Y%m%dT%H%M%S')
+            break
+        except ValueError:
+            continue
+    return sat_time
 
 def main():
     print('[INFO] Started')
@@ -48,6 +58,7 @@ def main():
         print(f'[ERROR] Input source {inputfile} does not exist')
 
     if mode == 'trim':
+        prev_dates = None
         out_dir = args.output
         if not os.path.exists(out_dir):
             try:
@@ -55,6 +66,20 @@ def main():
             except OSError:
                 print(f'[ERROR] Output dir {out_dir} does not exist and nor can be created')
                 exit(-1)
+        else:
+            print(f'[INFO] Obtaining dates of previous trim files')
+            prev_dates = dict.fromkeys(['S3A','S3B'])
+            prev_dates['S3A'] = {}
+            prev_dates['S3B'] = {}
+            for name in os.listdir(out_dir):
+                fdir = os.path.join(out_dir,name)
+                if os.path.isdir(fdir) and fdir.startswith('S3A') and fdir.endswith('.SEN3'):
+                    date = get_sat_time_from_fname(name)
+                    prev_dates['S3A'][date.strftime('%Y-%m-%d')] = 1
+                if os.path.isdir(fdir) and fdir.startswith('S3B') and fdir.endswith('.SEN3'):
+                    date = get_sat_time_from_fname(name)
+                    prev_dates['S3B'][date.strftime('%Y-%m-%d')] = 1
+
         source_dir = args.source
         if not os.path.exists(source_dir):
             print(f'[ERROR] Source dir {source_dir} does not exist')
@@ -69,6 +94,8 @@ def main():
             print(f'[INFO] Source directory: {source_dir}')
             print(f'[INFO] Output directory: {out_dir}')
             print(f'[INFO] Input file: {inputfile}')
+            if prev_dates is not None:
+                print(f'[INFO] Previous dates were obtained')
 
     if mode == 'dfcsv':
         output_file = args.output
@@ -147,6 +174,16 @@ def main():
                 continue
             if os.path.exists(source_dir_date):
                 for prod in os.listdir(source_dir_date):
+                    if prod.startswith('S3A') and prev_dates is not None:
+                        if dhere in prev_dates['S3A'].keys():
+                            continue
+                            if args.verbose:
+                                print(f'Trim file for S3A and date {dhere} already exists. Skipping...')
+                    if prod.startswith('S3B') and prev_dates is not None:
+                        if dhere in prev_dates['S3B'].keys():
+                            continue
+                            if args.verbose:
+                                print(f'Trim file for S3B and date {dhere} already exists. Skipping...')
                     path_prod = os.path.join(source_dir_date, prod)
                     iszipped = False
                     istar = False

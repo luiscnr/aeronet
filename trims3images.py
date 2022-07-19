@@ -181,7 +181,7 @@ def main():
         for line in flist:
             try:
                 datel = datetime.datetime.strptime(line.strip(),'%Y-%m-%d').date()
-                if datel>=sdate and datel<=edate:
+                if sdate <= datel <= edate:
                     date_list.append(datel)
             except:
                 print(f'[WARNING] Date: {line.strip()} is not in the correct format YYYY-mm-dd')
