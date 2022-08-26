@@ -6,6 +6,7 @@ from datetime import timedelta
 import numpy as np
 import pandas as pd
 import stat
+import subprocess
 
 parser = argparse.ArgumentParser(
     description="General utils")
@@ -172,6 +173,10 @@ def remove_nco():
                     if haytmp:
                         cmd = f'rm -f {jpath}/*.ncks.tmp'
                         print(cmd)
+                        prog = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE)
+                        out, err = prog.communicate()
+                        if err:
+                            print(err)
                 except:
                     continue
 
