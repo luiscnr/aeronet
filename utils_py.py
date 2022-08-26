@@ -10,7 +10,7 @@ import stat
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp'])
+parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp','removencotmp'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -102,6 +102,8 @@ def main():
             datetimeherestr = f'{datestr}T{timestr}'
             datetimehere = dt.strptime(datetimeherestr, datetime_format)
 
+            
+
             for g in groups:
                 if g == group:
                     continue
@@ -126,6 +128,10 @@ def main():
         if args.verbose:
             print(f'[INFO] Repeated records {nrepeated}')
         dfnew = dforig[valid]
+
+
+
+
         dfnew.to_csv(args.output, sep=';')
         print(f'[INFO] New dataset without repeated records saved to: {args.output}')
 
@@ -137,6 +143,32 @@ def main():
 
     if args.mode == 'printscp':
         print_scp()
+
+    if args.mode == 'removencotmp':
+        remove_nco()
+
+def remove_nco():
+    input_path = args.input
+    year_ini = 1997
+    year_fin = dt.now().year + 1
+    for iyear in range(year_ini,year_fin):
+        ypath = os.path.join(input_path,str(iyear))
+        if not os.path.exists(ypath):
+            continue
+        for imonth in range(1,13):
+            for iday in range(1,32):
+                try:
+                    datehere = dt(iyear,imonth,iday)
+                    jday = datehere.strftime('%j')
+                    jpath = os.path.join(ypath,jday)
+                    if not os.path.exists(jpath):
+                        continue
+                    #print(f'Checking path: {jpath}')
+                    cmd = f'rm -f {jpath}/*.ncks.tmp'
+                    print(cmd)
+                except:
+                    continue
+
 
 def print_scp():
     dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/INPUT_SOURCES/WFR_DOWNLOAD/pending'
