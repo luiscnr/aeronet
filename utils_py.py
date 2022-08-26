@@ -11,7 +11,7 @@ import subprocess
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp','removencotmp'])
+parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp','removencotmp','removefiles'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -147,6 +147,22 @@ def main():
 
     if args.mode == 'removencotmp':
         remove_nco()
+
+    if args.model == 'removefiles':
+        remove_files()
+
+def remove_files():
+    #remove files en output path with the names indicated in the text file inputpath
+    input_path = args.input
+    output_path = args.output
+    fileidx = open(input_path, 'r')
+    for line in fileidx:
+        name = line.strip()
+        foutput = os.path.join(output_path,name)
+        if os.path.exists(foutput):
+            print(f'Removing: {foutput}')
+            os.remove(foutput)
+    fileidx.close()
 
 def remove_nco():
     input_path = args.input
