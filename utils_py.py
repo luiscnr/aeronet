@@ -164,8 +164,14 @@ def remove_nco():
                     if not os.path.exists(jpath):
                         continue
                     #print(f'Checking path: {jpath}')
-                    cmd = f'rm -f {jpath}/*.ncks.tmp'
-                    print(cmd)
+                    haytmp = False
+                    for name in os.listdir(jpath):
+                        if name.endswith('ncks.tmp'):
+                            haytmp = True
+                            break
+                    if haytmp:
+                        cmd = f'rm -f {jpath}/*.ncks.tmp'
+                        print(cmd)
                 except:
                     continue
 
