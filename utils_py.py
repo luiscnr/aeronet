@@ -148,7 +148,7 @@ def main():
     if args.mode == 'removencotmp':
         remove_nco()
 
-    if args.model == 'removefiles':
+    if args.mode == 'removefiles':
         remove_files()
 
 def remove_files():
