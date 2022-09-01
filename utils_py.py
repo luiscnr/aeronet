@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 from datetime import datetime as dt
 from datetime import timedelta
 
@@ -150,6 +151,31 @@ def main():
 
     if args.mode == 'removefiles':
         remove_files()
+
+    if args.mode == 'copyfile':
+        copy_files()
+
+def copy_files():
+    #copy files with the dates indicated in the text file inputpath in output path
+    input_dir = '/store3/OC/MULTI/daily_v202012'
+    input_fname = 'X$DATE$-chl-med-hr.nc'
+    date_format_fname = '%Y%j'
+    input_path = args.input
+    output_path = args.output
+    filedates = open(input_path, 'r')
+    for line in filedates:
+        datestr = line.strip()
+        datep = dt.strptime(datestr,'%Y-%m-%d')
+        input_dir_date = os.path.join(input_dir,datep.strftime('%Y'),datep.strftime('%j'))
+        input_fname_date = input_fname.replace('$DATE$',datep.strftime(date_format_fname))
+        input_file = os.path.join(input_dir_date,input_fname_date)
+        output_file = os.path.join(output_path,input_fname_date)
+        if os.path.exists(input_file):
+            print(f'Copying: {input_file}')
+            shutil.copy(input_file,output_file)
+        
+
+
 
 def remove_files():
     #remove files en output path with the names indicated in the text file inputpath
