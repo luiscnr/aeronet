@@ -12,7 +12,7 @@ import subprocess
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp','removencotmp','removefiles'])
+parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp','removencotmp','removefiles','copyfile'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -173,7 +173,7 @@ def copy_files():
         if os.path.exists(input_file):
             print(f'Copying: {input_file}')
             shutil.copy(input_file,output_file)
-        
+
 
 
 
