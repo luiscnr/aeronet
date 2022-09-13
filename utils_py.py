@@ -12,7 +12,9 @@ import subprocess
 parser = argparse.ArgumentParser(
     description="General utils")
 
-parser.add_argument('-m', "--mode", help="Mode", choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget','printscp','removencotmp','removefiles','copyfile'])
+parser.add_argument('-m', "--mode", help="Mode",
+                    choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
+                             'removefiles', 'copyfile','copys3folders'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -104,8 +106,6 @@ def main():
             datetimeherestr = f'{datestr}T{timestr}'
             datetimehere = dt.strptime(datetimeherestr, datetime_format)
 
-            
-
             for g in groups:
                 if g == group:
                     continue
@@ -131,9 +131,6 @@ def main():
             print(f'[INFO] Repeated records {nrepeated}')
         dfnew = dforig[valid]
 
-
-
-
         dfnew.to_csv(args.output, sep=';')
         print(f'[INFO] New dataset without repeated records saved to: {args.output}')
 
@@ -155,8 +152,12 @@ def main():
     if args.mode == 'copyfile':
         copy_files()
 
+    if args.mode == 'copys3folders':
+        copy_s3_folder()
+
+
 def copy_files():
-    #copy files with the dates indicated in the text file inputpath in output path
+    # copy files with the dates indicated in the text file inputpath in output path
     input_dir = '/store3/OC/MULTI/daily_v202012'
     input_fname = 'X$DATE$-chl-med-hr.nc'
     date_format_fname = '%Y%j'
@@ -165,48 +166,70 @@ def copy_files():
     filedates = open(input_path, 'r')
     for line in filedates:
         datestr = line.strip()
-        datep = dt.strptime(datestr,'%Y-%m-%d')
-        input_dir_date = os.path.join(input_dir,datep.strftime('%Y'),datep.strftime('%j'))
-        input_fname_date = input_fname.replace('$DATE$',datep.strftime(date_format_fname))
-        input_file = os.path.join(input_dir_date,input_fname_date)
-        output_file = os.path.join(output_path,input_fname_date)
+        datep = dt.strptime(datestr, '%Y-%m-%d')
+        input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
+        input_fname_date = input_fname.replace('$DATE$', datep.strftime(date_format_fname))
+        input_file = os.path.join(input_dir_date, input_fname_date)
+        output_file = os.path.join(output_path, input_fname_date)
         if os.path.exists(input_file):
             print(f'Copying: {input_file}')
-            shutil.copy(input_file,output_file)
+            shutil.copy(input_file, output_file)
 
-
-
+def copy_s3_folder():
+    input_dir = '/dst04-data1/OC/OLCI/trimmed_sources/'
+    #copy s3 folder files indicated in the text file inputpath in outputpath
+    input_path = args.input
+    output_path = args.output
+    filedates = open(input_path, 'r')
+    for line in filedates:
+        file_name = line.strip().split('/')[-1]
+        file_name = file_name[:-21]
+        fs = file_name.split('_')
+        datep = dt.strptime(fs[7], '%Y%m%dT%H%M%S')
+        input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
+        dir_name = file_name + '.SEN3'
+        input_dir = os.path.join(input_dir_date,dir_name)
+        if os.path.exists(input_dir):
+            print(f'Copying input dir: {input_dir}')
+            output_dir = os.path.join(output_path,dir_name)
+            if not os.path.exists(output_dir):
+                os.path.mkdir(output_dir)
+            for f in os.listdir(input_dir):
+                input_file = os.path.join(input_dir,f)
+                output_file = os.path.join(output_dir,f)
+                shutil.copy(input_file, output_file)
 
 def remove_files():
-    #remove files en output path with the names indicated in the text file inputpath
+    # remove files en output path with the names indicated in the text file inputpath
     input_path = args.input
     output_path = args.output
     fileidx = open(input_path, 'r')
     for line in fileidx:
         name = line.strip()
-        foutput = os.path.join(output_path,name)
+        foutput = os.path.join(output_path, name)
         if os.path.exists(foutput):
             print(f'Removing: {foutput}')
             os.remove(foutput)
     fileidx.close()
 
+
 def remove_nco():
     input_path = args.input
     year_ini = 1997
     year_fin = dt.now().year + 1
-    for iyear in range(year_ini,year_fin):
-        ypath = os.path.join(input_path,str(iyear))
+    for iyear in range(year_ini, year_fin):
+        ypath = os.path.join(input_path, str(iyear))
         if not os.path.exists(ypath):
             continue
-        for imonth in range(1,13):
-            for iday in range(1,32):
+        for imonth in range(1, 13):
+            for iday in range(1, 32):
                 try:
-                    datehere = dt(iyear,imonth,iday)
+                    datehere = dt(iyear, imonth, iday)
                     jday = datehere.strftime('%j')
-                    jpath = os.path.join(ypath,jday)
+                    jpath = os.path.join(ypath, jday)
                     if not os.path.exists(jpath):
                         continue
-                    #print(f'Checking path: {jpath}')
+                    # print(f'Checking path: {jpath}')
                     haytmp = False
                     for name in os.listdir(jpath):
                         if name.endswith('ncks.tmp'):
@@ -231,11 +254,12 @@ def print_scp():
         if not name.endswith('.zip'):
             continue
         sat_time = get_sat_time_from_fname(name)
-        year_path = os.path.join(dir_output,sat_time.strftime('%Y'))
-        path_out = os.path.join(year_path,sat_time.strftime('%j'))
-        path_in = os.path.join(dir_base,name)
+        year_path = os.path.join(dir_output, sat_time.strftime('%Y'))
+        path_out = os.path.join(year_path, sat_time.strftime('%j'))
+        path_in = os.path.join(dir_base, name)
         cmd = f'scp {path_in} Luis.Gonzalezvilas@artov.ismar.cnr.it@192.168.10.94:{path_out}'
         print(cmd)
+
 
 def get_dhusget_paths():
     # finput = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower/OnlyWFR_S3B.csv'
@@ -311,9 +335,9 @@ def check_extracts_directories():
         df.loc[idx, 'Total'] = 0
 
     platform = 'S3B'
-    #dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower'
+    # dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Gustav_Dalen_Tower'
     dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Helsinki_Lighthouse'
-    #dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Irbe_Lighthouse'
+    # dir_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/TRIMMED/Irbe_Lighthouse'
 
     for ac in acnames:
         dir_extracts = os.path.join(dir_base, ac, 'extracts')
