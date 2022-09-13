@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
-                             'removefiles', 'copyfile','copys3folders'])
+                             'removefiles', 'copyfile', 'copys3folders'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -153,7 +153,7 @@ def main():
         copy_files()
 
     if args.mode == 'copys3folders':
-        copy_s3_folder()
+        copy_s3_folders()
 
 
 def copy_files():
@@ -175,9 +175,10 @@ def copy_files():
             print(f'Copying: {input_file}')
             shutil.copy(input_file, output_file)
 
-def copy_s3_folder():
+
+def copy_s3_folders():
     input_dir = '/dst04-data1/OC/OLCI/trimmed_sources/'
-    #copy s3 folder files indicated in the text file inputpath in outputpath
+    # copy s3 folder files indicated in the text file inputpath in outputpath
     input_path = args.input
     output_path = args.output
     filedates = open(input_path, 'r')
@@ -188,16 +189,17 @@ def copy_s3_folder():
         datep = dt.strptime(fs[7], '%Y%m%dT%H%M%S')
         input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
         dir_name = file_name + '.SEN3'
-        input_dir = os.path.join(input_dir_date,dir_name)
+        input_dir = os.path.join(input_dir_date, dir_name)
         if os.path.exists(input_dir):
             print(f'Copying input dir: {input_dir}')
-            output_dir = os.path.join(output_path,dir_name)
+            output_dir = os.path.join(output_path, dir_name)
             if not os.path.exists(output_dir):
-                os.path.mkdir(output_dir)
+                os.mkdir(output_dir)
             for f in os.listdir(input_dir):
-                input_file = os.path.join(input_dir,f)
-                output_file = os.path.join(output_dir,f)
+                input_file = os.path.join(input_dir, f)
+                output_file = os.path.join(output_dir, f)
                 shutil.copy(input_file, output_file)
+
 
 def remove_files():
     # remove files en output path with the names indicated in the text file inputpath
