@@ -182,25 +182,27 @@ def copy_s3_folders():
     input_path = args.input
     output_path = args.output
     filedates = open(input_path, 'r')
+    print(filedates)
     for line in filedates:
-        file_name = line.strip().split('/')[-1]
-        file_name = file_name[:-21]
-        fs = file_name.split('_')
-        datep = dt.strptime(fs[7], '%Y%m%dT%H%M%S')
-        input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
-        dir_name = file_name + '.SEN3'
-        input_dir = os.path.join(input_dir_date, dir_name)
-        if os.path.exists(input_dir):
-            print(f'Copying input dir: {input_dir}')
-            output_dir = os.path.join(output_path, dir_name)
-            if not os.path.exists(output_dir):
-                os.mkdir(output_dir)
-            for f in os.listdir(input_dir):
-                input_file = os.path.join(input_dir, f)
-                output_file = os.path.join(output_dir, f)
-                shutil.copy(input_file, output_file)
-        else:
-            print(f'[WARNING] Input dir: {input_dir} does not exist. Skiping...')
+        print(line)
+        # file_name = line.strip().split('/')[-1]
+        # file_name = file_name[:-21]
+        # fs = file_name.split('_')
+        # datep = dt.strptime(fs[7], '%Y%m%dT%H%M%S')
+        # input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
+        # dir_name = file_name + '.SEN3'
+        # input_dir = os.path.join(input_dir_date, dir_name)
+        # if os.path.exists(input_dir):
+        #     print(f'Copying input dir: {input_dir}')
+        #     output_dir = os.path.join(output_path, dir_name)
+        #     if not os.path.exists(output_dir):
+        #         os.mkdir(output_dir)
+        #     for f in os.listdir(input_dir):
+        #         input_file = os.path.join(input_dir, f)
+        #         output_file = os.path.join(output_dir, f)
+        #         shutil.copy(input_file, output_file)
+        # else:
+        #     print(f'[WARNING] Input dir: {input_dir} does not exist. Skiping...')
 
 def remove_files():
     # remove files en output path with the names indicated in the text file inputpath
