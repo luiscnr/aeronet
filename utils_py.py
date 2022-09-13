@@ -199,7 +199,8 @@ def copy_s3_folders():
                 input_file = os.path.join(input_dir, f)
                 output_file = os.path.join(output_dir, f)
                 shutil.copy(input_file, output_file)
-
+        else:
+            print(f'[WARNING] Input dir: {input_dir} does not exist. Skiping...')
 
 def remove_files():
     # remove files en output path with the names indicated in the text file inputpath
