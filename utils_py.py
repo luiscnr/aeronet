@@ -182,32 +182,28 @@ def copy_s3_folders():
     input_path = args.input
     output_path = args.output
     filedates = open(input_path, 'r')
-    print(filedates)
-    for line in filedates:
-        print('-----------------------------------------------------------------------------')
-        print(line)
-        file_name = line.strip().split('/')[-1]
-        print(file_name)
-        file_name = file_name[:-21]
-        print(file_name)
-        fs = file_name.split('_')
-        print(fs[7])
-        datep = dt.strptime(fs[7], '%Y%m%dT%H%M%S')
 
-        # input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
-        # dir_name = file_name + '.SEN3'
-        # input_dir = os.path.join(input_dir_date, dir_name)
-        # if os.path.exists(input_dir):
-        #     print(f'Copying input dir: {input_dir}')
-        #     output_dir = os.path.join(output_path, dir_name)
-        #     if not os.path.exists(output_dir):
-        #         os.mkdir(output_dir)
-        #     for f in os.listdir(input_dir):
-        #         input_file = os.path.join(input_dir, f)
-        #         output_file = os.path.join(output_dir, f)
-        #         shutil.copy(input_file, output_file)
-        # else:
-        #     print(f'[WARNING] Input dir: {input_dir} does not exist. Skiping...')
+    for line in filedates:
+        file_name = line.strip().split('/')[-1]
+        file_name = file_name[:-21]
+        fs = file_name.split('_')
+        datep = dt.strptime(fs[7], '%Y%m%dT%H%M%S')
+        input_dir_date = os.path.join(input_dir, datep.strftime('%Y'), datep.strftime('%j'))
+        dir_name = file_name + '.SEN3'
+        input_dir_here = os.path.join(input_dir_date, dir_name)
+
+
+        if os.path.exists(input_dir_here):
+            print(f'Copying input dir: {input_dir_here}')
+            output_dir = os.path.join(output_path, dir_name)
+            if not os.path.exists(output_dir):
+                os.mkdir(output_dir)
+            for f in os.listdir(input_dir_here):
+                input_file = os.path.join(input_dir_here, f)
+                output_file = os.path.join(output_dir, f)
+                shutil.copy(input_file, output_file)
+        else:
+            print(f'[WARNING] Input dir: {input_dir_here} does not exist. Skiping...')
 
 def remove_files():
     # remove files en output path with the names indicated in the text file inputpath
