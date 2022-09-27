@@ -74,6 +74,7 @@ def main():
         input_dir = args.sourcedir
         output_dir = args.outputdir
         do_trim_dates(input_dir, output_dir, start_date, end_date, [s, n, w, e])
+        exit(0)
 
     point_site = Point(insitu_lon, insitu_lat)
     out_dir = args.outputdir
