@@ -1,6 +1,7 @@
 import argparse
 import configparser
-import datetime
+from datetime import datetime as dt
+from datetime import timedelta
 import os
 import subprocess
 import shutil
@@ -171,16 +172,16 @@ def main():
         if not os.path.exists(fdates):
             print(f'[ERROR] File with list of dates: {fdates} does not exist')
             return
-        sdate = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+        sdate = dt.strptime(start_date, '%Y-%m-%d').date()
         if end_date is None:
-            edate = datetime.datetime.now().date()
+            edate = dt.now().date()
         else:
-            edate = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+            edate = dt.strptime(end_date, '%Y-%m-%d').date()
         flist = open(fdates,'r')
         date_list = []
         for line in flist:
             try:
-                datel = datetime.datetime.strptime(line.strip(),'%Y-%m-%d').date()
+                datel = dt.strptime(line.strip(),'%Y-%m-%d').date()
                 if sdate <= datel <= edate:
                     date_list.append(datel)
             except:
@@ -192,15 +193,15 @@ def main():
             date_list = areader.get_available_dates(start_date, end_date)
         else:
             date_list = []
-            sdate = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            sdate = dt.strptime(start_date, '%Y-%m-%d').date()
             if end_date is None:
-                edate = datetime.datetime.now().date()
+                edate = dt.now().date()
             else:
-                edate = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+                edate = dt.strptime(end_date, '%Y-%m-%d').date()
             date_here = sdate
             while date_here <= edate:
                 date_list.append(date_here)
-                date_here = date_here + datetime.timedelta(hours=24)
+                date_here = date_here + timedelta(hours=24)
 
     res_list = []
     for d in date_list:
