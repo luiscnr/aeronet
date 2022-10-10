@@ -57,6 +57,13 @@ def main():
         e = 22.25
         insitu_lat = 57.75092
         insitu_lon = 21.72297
+    elif geo_coords == 'TRASIMENO':
+        w = 11.6
+        e = 12.6
+        s = 42.6
+        n = 43.6
+        insitu_lat = 43.12278
+        insitu_lon = 12.13306
     else:
         geo_list = geo_coords.split('_')
         s = float(geo_list[0].strip())

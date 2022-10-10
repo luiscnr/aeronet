@@ -12,6 +12,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/base/anet_nc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/base/anet_nc_file.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trims3basic.py" beforeDir="false" afterPath="$PROJECT_DIR$/trims3basic.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trims3images.py" beforeDir="false" afterPath="$PROJECT_DIR$/trims3images.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
