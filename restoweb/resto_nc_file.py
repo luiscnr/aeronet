@@ -1,32 +1,13 @@
-import datetime
+
 
 from netCDF4 import Dataset
 
-class ANETNCFile:
+class RESTONCFile:
 
     def __init__(self, file_path):
         self.outf = file_path
         self.dimension_names = ['TimeIndex','Central_wavelenghts']
         self.nc = None
-        self.variables_names = {
-            'Solar_Zenith_Angle': {
-                'short_name': 'SZA',
-                'long_name': 'Solar Zenith Angle',
-                'units': 'degrees'
-            },
-            'Solar_Azimuth_Angle': {
-                'short_name': 'SAA',
-                'long_name': 'Solar Azimuth Angle',
-                'units': 'degrees'
-            },
-            'Lt_mean': {
-                'short_name': 'Lt mean',
-                'long_name': 'Solar Azimuth Angle',
-                'units': 'degrees'
-            },
-
-
-        }
 
     def start_file(self,ntimes,nws):
         self.nc =Dataset(self.outf, 'w', format='NETCDF4')
@@ -48,14 +29,15 @@ class ANETNCFile:
         ##Units and long name
         var[:] = array
 
-    def add_1D_variable(self,var_name,array):
-        var = self.nc.createVariable(var_name,'f4',('TimeIndex',),fill_value=-999, zlib=True, complevel=6)
-        ##Units and long name
-        var[:] = array
+    def add_global_atributtes(self,start_date,end_date,instrument):
+        # global atributes
+        self.nc.latitude = 43.12278
+        self.nc.longitude = 12.13306
+        self.nc.site = 'Trasimeno Lake'
+        self.nc.siteid = 'TAIT'
+        self.nc.start_date = start_date.strftime('%Y-%m-%d %H:%M')
+        self.nc.end_date = end_date.strftime('%Y-%m-%d %H:%M')
+        self.nc.instrument = instrument
 
     def close_file(self):
         self.nc.close()
-
-
-
-

@@ -26,10 +26,18 @@ def only_test_two():
     ipv = CSVInsituFile(file)
     return True
 
+def only_test_three():
+    from restoweb.resto import RESTO_WEB
+    fout = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/ResTO_WispWeb/Test.nc'
+    rweb = RESTO_WEB(True)
+    rweb.retrive_data(datetime.datetime.strptime('2021-05-10','%Y-%m-%d'),datetime.datetime.strptime('2021-05-15','%Y-%m-%d'),None)
+    rweb.save_data_as_ncfile(fout)
+    return True
+
 def main():
-    # b = only_test_two()
-    # if b:
-    #     return
+    b = only_test_three()
+    if b:
+        return
     #to run script loca:
     #python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint

@@ -95,6 +95,11 @@ def main():
         e = 18
         s = 58
         n = 59
+    elif site=='TAIT':
+        w = 11.6
+        e = 12.6
+        s = 42.6
+        n = 43.6
     else:
         w = insitu_lon - 0.15
         e = insitu_lon + 0.15
