@@ -64,6 +64,13 @@ def main():
         n = 43.6
         insitu_lat = 43.12278
         insitu_lon = 12.13306
+    elif geo_coords == 'VENISE':
+        w = 12
+        e = 13
+        s = 44.8
+        n = 45.8
+        insitu_lat = 45.313900
+        insitu_lon = 12.508300
     else:
         geo_list = geo_coords.split('_')
         s = float(geo_list[0].strip())
