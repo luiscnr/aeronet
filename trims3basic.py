@@ -71,6 +71,13 @@ def main():
         n = 45.8
         insitu_lat = 45.313900
         insitu_lon = 12.508300
+    elif geo_coords == 'LAIT':
+        w = 12
+        e = 13
+        s = 35
+        n = 36
+        insitu_lat = 35.4935
+        insitu_lon = 12.4678
     else:
         geo_list = geo_coords.split('_')
         s = float(geo_list[0].strip())
