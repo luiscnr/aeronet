@@ -107,13 +107,18 @@ def main():
             wce = None
             if args.wce:
                 wce = args.wce
+            info = get_info_from_output_path(out_dir)
             for path in os.listdir(args.sourcedir):
                 if wce is not None:
                     if path.find(wce) < 0:
                         continue
+                exist = check_exist_in_output_path(path,info)
                 path_prod = os.path.join(args.sourcedir, path)
-                print(f'[INFO] Trimming product: {path_prod}')
-                trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
+                if exist:
+                    print(f'[INFO] Product {path_prod} already exists. Skipping...')
+                else:
+                    print(f'[INFO] Trimming product: {path_prod}')
+                    trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
         else:
             wce = 'EFR'
             if args.wce:
@@ -302,6 +307,48 @@ def check_prod_site(path_prod, point_site):
                 gc.close()
     return flag_location
 
+def get_dates_and_platform_from_file_name(name):
+    from datetime import datetime as dt
+    platform = None
+    start_date = None
+    end_date = None
+    try:
+        platform = name.split('_')[0]
+        start_date = dt.strptime(name.split('_')[7], '%Y%m%dT%H%M%S')
+        end_date = dt.strptime(name.split('_')[8], '%Y%m%dT%H%M%S')
+    except:
+        pass
+    return platform, start_date, end_date
+
+def get_info_from_output_path(extract_path):
+    if extract_path is None:
+        return None
+    if not os.path.exists(extract_path):
+        return None
+    info = {key: {} for key in ['S3A', 'S3B']}
+    for name in os.listdir(extract_path):
+        if not name.startswith('S3'):
+            continue
+        platform, start_date, end_date = get_dates_and_platform_from_file_name(name)
+        date_ref = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        date_str = start_date.strftime('%Y-%m-%d')
+        hours = ((start_date - date_ref).total_seconds()) / 3600
+        info[platform][date_str] = hours
+    return info
+
+def check_exist_in_output_path(name,info):
+    exist = False
+    platform, start_date, end_date = get_dates_and_platform_from_file_name(name)
+    date_str = start_date.strftime('%Y-%m-%d')
+    date_ref = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    hours_start = ((start_date - date_ref).total_seconds()) / 3600
+    hours_end = ((end_date - date_ref).total_seconds()) / 3600
+    if platform in info:
+        if date_str in info[platform]:
+            hours_check = info[platform][date_str]
+            if hours_start<=hours_check<=hours_end:
+                exist = True
+    return exist
 
 def get_flag_location_from_line_geo(line_str, point_site):
     clist = line_str[len('<gml:posList>'):line_str.index('</gml:posList>')].split()
