@@ -11,10 +11,11 @@ import subprocess
 
 parser = argparse.ArgumentParser(
     description="Generation of NC Aeronet Files using CSV files downloaded from the Aeronet web site")
-parser.add_argument("-d", "--debug", help="Debugging mode.", action="store_true")
+parser.add_argument("-d", "--download", help="Download data.", action="store_true")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 parser.add_argument('-i', "--inputpath", help="Input (download) directory")
 parser.add_argument('-o', "--outputpath", help="Output directory")
+parser.add_argument('-s', "--sites", help="Aeronet site. BAL for Baltic Sites")
 parser.add_argument('-t', "--thuillier", help="Thulier method", choices=['interp'])
 args = parser.parse_args()
 
@@ -35,9 +36,9 @@ def only_test_three():
     return True
 
 def main():
-    b = only_test_three()
-    if b:
-        return
+    # b = only_test_three()
+    # if b:
+    #     return
     #to run script loca:
     #python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
@@ -45,28 +46,43 @@ def main():
     dir_output = args.outputpath
 
     if dir_base is None or dir_output is None:
-        print('Input and output path are required...')
+        print('[ERROR] Input and output path are required...')
+        return
 
     # #dir_base = '/home/lois/PycharmProjects/aeronets/DATA/INPUT_FILES/prueba'
     # # dir_output = '/home/lois/PycharmProjects/aeronets/DATA/OUTPUT_FILES'
 
-    # print('Downloading level 2')
-    # url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
-    # r = requests.get(url, allow_redirects=True)
-    # file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
-    # open(file_out, 'wb').write(r.content)
-    # print('Uncompressing level 2')
-    # file_tar = tarfile.open(file_out)
-    # file_tar.extractall(dir_base)
-    #
-    # print('Downloading level 1.5')
-    # url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
-    # r = requests.get(url, allow_redirects=True)
-    # file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
-    # open(file_out, 'wb').write(r.content)
-    # print('Uncompressing level 1.5')
-    # file_tar = tarfile.open(file_out)
-    # file_tar.extractall(dir_base)
+    make_download = False
+    if args.download:
+        make_download = True
+
+    if make_download:
+        if args.verbose:
+            print('Downloading level 2')
+        url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
+        r = requests.get(url, allow_redirects=True)
+        file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
+        open(file_out, 'wb').write(r.content)
+        if args.verbose:
+            print('Uncompressing level 2')
+        file_tar = tarfile.open(file_out)
+        file_tar.extractall(dir_base)
+
+        if args.verbose:
+            print('Downloading level 1.5')
+        url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
+        r = requests.get(url, allow_redirects=True)
+        file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
+        open(file_out, 'wb').write(r.content)
+        if args.verbose:
+            print('Uncompressing level 1.5')
+        file_tar = tarfile.open(file_out)
+        file_tar.extractall(dir_base)
+
+    sites = None
+    if args.sites:
+        if args.sites=='BAL':
+            sites = ['Gustav_Dalen_Tower','Irbe_Lighthouse','Helsinki_Lighthouse']
 
     dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
     dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
@@ -77,8 +93,15 @@ def main():
         site = f[f.find('_') + 1:f.find('.')]
         site = site[site.find('_') + 1:len(site)]
 
-        if site == 'Gloria':
-            print('DOING SITE:', site, '-----------------------------------------')
+        do_site = True
+        if sites is not None:
+            if site not in sites:
+                do_site = False
+
+        #if site == 'Gloria':
+        if do_site:
+            if args.verbose:
+                print('DOING SITE:', site, '-----------------------------------------')
             afilel20 = ANETFile(f20, None, False)
             afilel15 = ANETFile(f15, None, False)
             dfcombined = afilel20.check_and_append_df(afilel15)

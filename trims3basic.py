@@ -37,24 +37,24 @@ def main():
         w = 9.25
         e = 30.25
     elif geo_coords == 'BAL_GDT':
-        s = 58
-        n = 59
-        w = 17
-        e = 18
+        s = 57.5
+        n = 59.5
+        w = 16.5
+        e = 18.5
         insitu_lat = 58.59417
         insitu_lon = 17.46683
     elif geo_coords == 'BAL_HLH':
-        s = 59.5
-        n = 60.5
-        w = 24.5
-        e = 25.5
+        s = 59
+        n = 61
+        w = 24
+        e = 26
         insitu_lat = 59.94897
         insitu_lon = 24.92636
     elif geo_coords == 'BAL_ILH':
-        s = 57.25
-        n = 58.25
-        w = 21.25
-        e = 22.25
+        s = 56.75
+        n = 58.75
+        w = 20.75
+        e = 22.75
         insitu_lat = 57.75092
         insitu_lon = 21.72297
     elif geo_coords == 'TRASIMENO':
@@ -104,7 +104,13 @@ def main():
         trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
     elif args.sourcedir:
         if not args.list_dates:
+            wce = None
+            if args.wce:
+                wce = args.wce
             for path in os.listdir(args.sourcedir):
+                if wce is not None:
+                    if path.find(wce) < 0:
+                        continue
                 path_prod = os.path.join(args.sourcedir, path)
                 print(f'[INFO] Trimming product: {path_prod}')
                 trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
