@@ -115,7 +115,8 @@ def main():
                 exist = check_exist_in_output_path(path, info)
                 path_prod = os.path.join(args.sourcedir, path)
                 if exist:
-                    print(f'[INFO] Product {path_prod} already exists. Skipping...')
+                    if path.startswith('S3A_OL_1_EFR____20220605T085527'):
+                        print(f'[INFO] Product {path_prod} already exists. Skipping...')
                 else:
                     print(f'[INFO] Trimming product: {path_prod}')
                     trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
