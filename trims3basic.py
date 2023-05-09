@@ -109,13 +109,16 @@ def main():
                 wce = args.wce
             info = get_info_from_output_path(out_dir, wce)
             for path in os.listdir(args.sourcedir):
+                if path.startswith('S3A_OL_1_EFR____20220605T'):
+                    print('------------------------------------------------------------------->')
+
                 if wce is not None:
                     if path.find(wce) < 0:
                         continue
                 exist = check_exist_in_output_path(path, info)
                 path_prod = os.path.join(args.sourcedir, path)
                 if exist:
-                    if path.startswith('S3A_OL_1_EFR____20220605T085527'):
+                    if path=='kk':
                         print(f'[INFO] Product {path_prod} already exists. Skipping...')
                 else:
                     print(f'[INFO] Trimming product: {path_prod}')
@@ -354,8 +357,6 @@ def check_exist_in_output_path(name, info):
     if platform in info:
         if date_str in info[platform]:
             hours_check = info[platform][date_str]
-            if name.startswith('S3A_OL_1_EFR____20220605T085527'):
-                print('------------------------------------------------------------------------> ',hours_check)
             if hours_start <= hours_check <= hours_end:
                 exist = True
     return exist
