@@ -107,7 +107,7 @@ def main():
             wce = None
             if args.wce:
                 wce = args.wce
-            info = get_info_from_output_path(out_dir)
+            info = get_info_from_output_path(out_dir,wce)
             for path in os.listdir(args.sourcedir):
                 if wce is not None:
                     if path.find(wce) < 0:
@@ -320,7 +320,7 @@ def get_dates_and_platform_from_file_name(name):
         pass
     return platform, start_date, end_date
 
-def get_info_from_output_path(extract_path):
+def get_info_from_output_path(extract_path,wce):
     if extract_path is None:
         return None
     if not os.path.exists(extract_path):
@@ -329,6 +329,9 @@ def get_info_from_output_path(extract_path):
     for name in os.listdir(extract_path):
         if not name.startswith('S3'):
             continue
+        if wce is not None:
+            if name.find(wce) < 0:
+                continue
         platform, start_date, end_date = get_dates_and_platform_from_file_name(name)
         date_ref = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
         date_str = start_date.strftime('%Y-%m-%d')
