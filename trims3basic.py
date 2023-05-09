@@ -107,12 +107,12 @@ def main():
             wce = None
             if args.wce:
                 wce = args.wce
-            info = get_info_from_output_path(out_dir,wce)
+            info = get_info_from_output_path(out_dir, wce)
             for path in os.listdir(args.sourcedir):
                 if wce is not None:
                     if path.find(wce) < 0:
                         continue
-                exist = check_exist_in_output_path(path,info)
+                exist = check_exist_in_output_path(path, info)
                 path_prod = os.path.join(args.sourcedir, path)
                 if exist:
                     print(f'[INFO] Product {path_prod} already exists. Skipping...')
@@ -191,7 +191,7 @@ def do_trim_dates(input_dir, output_dir, start_date, end_date, geo_limits):
     if args.verbose:
         print(f'[INFO] Deleting temporary paths')
     for f in os.listdir(temporal_dir):
-        tpath = os.path.join(temporal_dir,f)
+        tpath = os.path.join(temporal_dir, f)
         if os.path.isdir(tpath):
             cmd = f'rmdir {tpath}'
             prog = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE)
@@ -201,6 +201,7 @@ def do_trim_dates(input_dir, output_dir, start_date, end_date, geo_limits):
     prog.communicate()
 
     print('[INFO] TRIM COMPLETED')
+
 
 def check_path_prod(f, prod_path, wce, geo_limits, temporal_dir):
     prod_path_u = None
@@ -307,6 +308,7 @@ def check_prod_site(path_prod, point_site):
                 gc.close()
     return flag_location
 
+
 def get_dates_and_platform_from_file_name(name):
     from datetime import datetime as dt
     platform = None
@@ -320,7 +322,8 @@ def get_dates_and_platform_from_file_name(name):
         pass
     return platform, start_date, end_date
 
-def get_info_from_output_path(extract_path,wce):
+
+def get_info_from_output_path(extract_path, wce):
     if extract_path is None:
         return None
     if not os.path.exists(extract_path):
@@ -339,7 +342,8 @@ def get_info_from_output_path(extract_path,wce):
         info[platform][date_str] = hours
     return info
 
-def check_exist_in_output_path(name,info):
+
+def check_exist_in_output_path(name, info):
     exist = False
     platform, start_date, end_date = get_dates_and_platform_from_file_name(name)
     date_str = start_date.strftime('%Y-%m-%d')
@@ -349,9 +353,12 @@ def check_exist_in_output_path(name,info):
     if platform in info:
         if date_str in info[platform]:
             hours_check = info[platform][date_str]
-            if hours_start<=hours_check<=hours_end:
+            if name.startswith('S3A_OL_1_EFR____20220605T085527'):
+                print('------------------------------------------------------------------------> ',hours_check)
+            if hours_start <= hours_check <= hours_end:
                 exist = True
     return exist
+
 
 def get_flag_location_from_line_geo(line_str, point_site):
     clist = line_str[len('<gml:posList>'):line_str.index('</gml:posList>')].split()
