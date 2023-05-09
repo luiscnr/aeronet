@@ -146,7 +146,8 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete, arg_o
     else:
         if arg_verbose:
             print("## not a valid product: " + arg_iprod)
-        sys.exit()
+        #sys.exit()
+        return
     prod_dir = os.path.dirname(iprod)
 
     if not arg_outdir is None and os.path.isdir(arg_outdir):

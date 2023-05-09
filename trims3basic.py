@@ -109,17 +109,14 @@ def main():
                 wce = args.wce
             info = get_info_from_output_path(out_dir, wce)
             for path in os.listdir(args.sourcedir):
-                if path.startswith('S3A_OL_1_EFR____20220605T'):
-                    print('------------------------------------------------------------------->')
-
+                
                 if wce is not None:
                     if path.find(wce) < 0:
                         continue
                 exist = check_exist_in_output_path(path, info)
                 path_prod = os.path.join(args.sourcedir, path)
                 if exist:
-                    if path=='kk':
-                        print(f'[INFO] Product {path_prod} already exists. Skipping...')
+                    print(f'[INFO] Product {path_prod} already exists. Skipping...')
                 else:
                     print(f'[INFO] Trimming product: {path_prod}')
                     trimtool.make_trim(s, n, w, e, path_prod, None, False, out_dir, args.verbose)
