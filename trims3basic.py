@@ -109,7 +109,7 @@ def main():
                 wce = args.wce
             info = get_info_from_output_path(out_dir, wce)
             for path in os.listdir(args.sourcedir):
-                print(path)
+                #print(path)
                 if wce is not None:
                     if path.find(wce) < 0:
                         continue

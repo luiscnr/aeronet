@@ -196,7 +196,8 @@ def make_trim(south, north, west, east, arg_iprod, arg_tardir, arg_delete, arg_o
             print("No pixels on selected area")
         if is_zip_or_tar and arg_delete:
             shutil.rmtree(iprod)
-        sys.exit()
+        #sys.exit()
+        return
 
     # select first and last rows and cols on tie coordinates
     firsttierow = np.min(g_tie[0])
