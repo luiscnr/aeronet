@@ -221,8 +221,8 @@ def do_comparison_bal_multi_olci():
 
     print('[INFO] STARTED HARDCORED COMPARISON...')
     from datetime import datetime as dt
-    dir_olci = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
-    dir_multi = '/store3/OC/CCI_v2017/daily_v202207'
+    dir_olci_orig = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
+    dir_multi_orig = '/store3/OC/CCI_v2017/daily_v202207'
     dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/CHLA'
     file_grid = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/Grid.csv'
     start_date = dt(2016,4,26)
@@ -232,14 +232,15 @@ def do_comparison_bal_multi_olci():
         date_here_str = date_here.strftime('%Y%m%d')
         year = date_here.strftime('%Y')
         jday = date_here.strftime('%j')
-        dir_olci = os.path.join(dir_olci,year,jday)
-        dir_multi = os.path.join(dir_multi,year,jday)
+        dir_olci = os.path.join(dir_olci_orig,year,jday)
+        dir_multi = os.path.join(dir_multi_orig,year,jday)
         print(date_here_str)
         if os.path.exists(dir_olci) and os.path.exists(dir_multi):
             print('llega aqui')
             file_olci =os.path.join(dir_olci,f'O{date_here_str}-chl-bal-fr.nc')
             file_multi = os.path.join(dir_multi,f'C{date_here_str}-chl-bal-hr.nc')
             if os.path.exists(file_multi) and os.path.exists(file_olci):
+                print('y tambien aqui')
                 print(f'[INFO] Making date: {date_here_str}')
                 file_out = os.path.join(dir_out,f'Comparison_chla_{date_here_str}.csv')
                 make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
