@@ -240,7 +240,7 @@ def do_comparison_bal_multi_olci():
                 print(f'[INFO] Making date: {date_here_str}')
                 file_out = os.path.join(dir_out,f'Comparison_chla_{date_here_str}.csv')
                 make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
-
+        date_here = date_here + timedelta(hours=24)
 
 
 
