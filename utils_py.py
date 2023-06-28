@@ -219,6 +219,7 @@ def do_comparison_bal_multi_olci():
     # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI//Comparison_chla_2016117.csv'
     # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
 
+    print('[INFO] STARTED HARDCORED COMPARISON...')
     from datetime import datetime as dt
     dir_olci = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
     dir_multi = '/store3/OC/CCI_v2017/daily_v202207'
