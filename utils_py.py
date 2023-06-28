@@ -236,9 +236,10 @@ def do_comparison_bal_multi_olci():
         dir_multi = os.path.join(dir_multi_orig,year,jday)
         print(date_here_str)
         if os.path.exists(dir_olci) and os.path.exists(dir_multi):
-            print('llega aqui')
+
             file_olci =os.path.join(dir_olci,f'O{date_here_str}-chl-bal-fr.nc')
             file_multi = os.path.join(dir_multi,f'C{date_here_str}-chl-bal-hr.nc')
+            print('llega aqui',os.path.exists(file_multi),os.path.exists(file_olci))
             if os.path.exists(file_multi) and os.path.exists(file_olci):
                 print('y tambien aqui')
                 print(f'[INFO] Making date: {date_here_str}')
