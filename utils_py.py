@@ -229,23 +229,21 @@ def do_comparison_bal_multi_olci():
     end_date = dt(2022,12,31)
     date_here = start_date
     while date_here<=end_date:
-        date_here_str = date_here.strftime('%Y%m%d')
+        #date_here_str = date_here.strftime('%Y%m%d')
         year = date_here.strftime('%Y')
         jday = date_here.strftime('%j')
         dir_olci = os.path.join(dir_olci_orig,year,jday)
         dir_multi = os.path.join(dir_multi_orig,year,jday)
-        print(date_here_str)
+        #print(date_here_str)
         if os.path.exists(dir_olci) and os.path.exists(dir_multi):
 
-            file_olci =os.path.join(dir_olci,f'O{date_here_str}-chl-bal-fr.nc')
-            file_multi = os.path.join(dir_multi,f'C{date_here_str}-chl-bal-hr.nc')
-            print('llega aqui',os.path.exists(file_multi),os.path.exists(file_olci))
-            print(file_multi)
-            print(file_olci)
+            file_olci =os.path.join(dir_olci,f'O{year}{jday}-chl-bal-fr.nc')
+            file_multi = os.path.join(dir_multi,f'C{year}{jday}-chl-bal-hr.nc')
+
             if os.path.exists(file_multi) and os.path.exists(file_olci):
                 print('y tambien aqui')
-                print(f'[INFO] Making date: {date_here_str}')
-                file_out = os.path.join(dir_out,f'Comparison_chla_{date_here_str}.csv')
+                print(f'[INFO] Making date: {date_here}')
+                file_out = os.path.join(dir_out,f'Comparison_chla_{year}{jday}.csv')
                 make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
         date_here = date_here + timedelta(hours=24)
 
