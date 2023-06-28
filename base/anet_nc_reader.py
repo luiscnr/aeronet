@@ -147,8 +147,8 @@ class AERONETReader:
 
     def get_datetime(self, row):
         timevalue = float(self.dataset['Time'][row])
-        if row<10:
-            print('*****************',timevalue)
+        # if row<10:
+        #     print('*****************',timevalue)
         dt = self.ac.DATEREF + timedelta(seconds=timevalue)
         return dt
 

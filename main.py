@@ -35,10 +35,34 @@ def only_test_three():
     rweb.save_data_as_ncfile(fout)
     return True
 
+def only_test_four():
+    print('BALTIC FIGURE')
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import cartopy
+
+    ax = plt.axes(projection=ccrs.Miller())
+    ax.set_extent([10, 31, 53, 67], crs=ccrs.PlateCarree())
+    #ax.coastlines()
+
+    import cartopy.feature as cfeature
+    land_50m = cfeature.NaturalEarthFeature('physical', 'land', '10m',
+                                            edgecolor='black',
+                                            facecolor=cfeature.COLORS['land'])
+
+    ax.add_feature(land_50m)
+    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black', scale='50m')
+    #
+    #
+
+    fout = '/mnt/c/DATA_LUIS/octac_work/bal_evolution/Figure1.tif'
+    plt.savefig(fout,dpi=300,bbox_inches = 'tight')
+
+    return True
 def main():
-    # b = only_test_three()
-    # if b:
-    #     return
+    b = only_test_four()
+    if b:
+        return
     #to run script loca:
     #python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint

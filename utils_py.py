@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
-                             'removefiles', 'copyfile', 'copys3folders'])
+                             'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
@@ -155,6 +155,129 @@ def main():
     if args.mode == 'copys3folders':
         copy_s3_folders()
 
+    if args.mode == 'comparison_bal_multi_olci':
+        do_comparison_bal_multi_olci()
+
+def do_comparison_bal_multi_olci():
+    import pandas as pd
+    from netCDF4 import Dataset
+    import numpy as np
+
+
+    #input grid multi
+    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/MULTI/C2016117-chl-bal-hr.nc'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/GridMulti.csv'
+    # dataset = Dataset(file_input)
+    # lat_array = np.array(dataset.variables['lat'])
+    # lon_array = np.array(dataset.variables['lon'])
+    # nlat = len(lat_array)
+    # nlon = len(lon_array)
+    # index = 1
+    # f1 = open(file_out,'w')
+    # line = f'Index;YMulti;XMulti;Latitude;Longitude'
+    # f1.write(line)
+    # for y in range(0,nlat,10):
+    #     for x in range(0,nlon,10):
+    #         lat_here = lat_array[y]
+    #         lon_here = lon_array[x]
+    #         line = f'{index};{y};{x};{lat_here};{lon_here}'
+    #         index = index +1
+    #         print(line)
+    #         f1.write('\n')
+    #         f1.write(line)
+    # f1.close()
+
+    #input grid olci
+    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/OLCI/O2016117-chl-bal-fr.nc'
+    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/GridMulti.csv'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/GridOlci.csv'
+    #
+    # grid = pd.read_csv(file_grid,sep=';')
+    # lat_grid = grid['Latitude'].to_numpy()
+    # lon_grid = grid['Longitude'].to_numpy()
+    # dataset = Dataset(file_input)
+    # lat_array = np.array(dataset.variables['lat'])
+    # lon_array = np.array(dataset.variables['lon'])
+    # f1 = open(file_out,'w')
+    # line = f'Index;YOlci;XMOlci;Latitude;Longitude'
+    # f1.write(line)
+    # for idx in range(len(lat_grid)):
+    #     index = idx +1
+    #     lat_here = lat_grid[idx]
+    #     lon_here = lon_grid[idx]
+    #     y = np.argmin(np.abs(lat_array-lat_here))
+    #     x = np.argmin(np.abs(lon_array-lon_here))
+    #     line = f'{index};{y};{x};{lat_here};{lon_here}'
+    #     print(line)
+    #     f1.write('\n')
+    #     f1.write(line)
+    # f1.close()
+
+    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/Grid.csv'
+    # file_olci = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/OLCI/O2016117-chl-bal-fr.nc'
+    # file_multi = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/MULTI/C2016117-chl-bal-hr.nc'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI//Comparison_chla_2016117.csv'
+    # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
+
+    from datetime import datetime as dt
+    dir_olci = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
+    dir_multi = '/store3/OC/CCI_v2017/daily_v202207'
+    dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/CHLA'
+    file_grid = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/Grid.csv'
+    start_date = dt(2016,4,26)
+    end_date = dt(2022,12,31)
+    date_here = start_date
+    while date_here<=end_date:
+        date_here_str = date_here.strftime('%Y%m%d')
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_olci = os.path.join(dir_olci,year,jday)
+        dir_multi = os.path.join(dir_multi,year,jday)
+        if os.path.exists(dir_olci) and os.path.exists(dir_multi):
+            file_olci =os.path.join(dir_olci,f'O{date_here_str}-chl-bal-fr.nc')
+            file_multi = os.path.join(dir_multi,f'C{date_here_str}-chl-bal-hr.nc')
+            if os.path.exists(file_multi) and os.path.exists(file_olci):
+                print(f'[INFO] Making date: {date_here_str}')
+                file_out = os.path.join(dir_out,f'Comparison_chla_{date_here_str}.csv')
+                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
+
+
+
+
+
+def make_comparison_impl(file_grid,file_multi,file_olci,file_out,variable_multi,variable_olci):
+    import pandas as pd
+    from netCDF4 import Dataset
+    import numpy as np
+    import numpy.ma as ma
+
+    grid = pd.read_csv(file_grid, sep=';')
+    dataset_multi = Dataset(file_multi)
+    dataset_olci = Dataset(file_olci)
+    array_multi = np.array(dataset_multi.variables[variable_multi])
+    array_olci = np.array(dataset_olci.variables[variable_olci])
+    for index,row in grid.iterrows():
+        ymulti = int(row['YMulti'])
+        xmulti = int(row['XMulti'])
+        yolci = int(row['YOlci'])
+        xolci = int(row['XOlci'])
+        valid = 0
+        val_multi = array_multi[0,ymulti,xmulti]
+        array_here = array_olci[0,yolci-1:yolci+2,xolci-1:xolci+2]
+        array_here_good = array_here[array_here!=-999]
+        val_olci = -999
+        if len(array_here_good)==9:
+            val_olci = np.mean(array_here[array_here!=-999])
+        if val_olci!=-999 and val_multi!=-999:
+            valid = 1
+        grid.loc[index,'MultiVal'] = val_multi
+        grid.loc[index,'OlciVal'] = val_olci
+        grid.loc[index,'Valid'] = valid
+
+    dataset_olci.close()
+    dataset_multi.close()
+    grid_valid = grid[grid['Valid']==1]
+    grid_valid.to_csv(file_out,sep=';')
 
 def copy_files():
     # copy files with the dates indicated in the text file inputpath in output path
