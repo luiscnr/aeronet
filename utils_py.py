@@ -225,8 +225,8 @@ def do_comparison_bal_multi_olci():
     from datetime import datetime as dt
     dir_olci_orig = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
     dir_multi_orig = '/store3/OC/CCI_v2017/daily_v202207'
-    #FOLDERS: CHLA, RRS443, RRS490,
-    dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/RRS443'
+    #FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
+    dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/RRS490'
     file_grid = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/Grid.csv'
     start_date = dt(2016,5,1)
     end_date = dt(2022,12,31)
@@ -240,13 +240,15 @@ def do_comparison_bal_multi_olci():
         #print(date_here_str)
         if os.path.exists(dir_olci) and os.path.exists(dir_multi):
 
-            file_olci =os.path.join(dir_olci,f'O{year}{jday}-rrs442_5-bal-fr.nc')
-            file_multi = os.path.join(dir_multi,f'C{year}{jday}-rrs443-bal-hr.nc')
+            #chla,rrs442_5,rrs490,rrs510,rrs560,rrs665
+            file_olci =os.path.join(dir_olci,f'O{year}{jday}-rrs490-bal-fr.nc')
+            # chla,rrs443,rrs490,rrs510,rrs560,rrs665
+            file_multi = os.path.join(dir_multi,f'C{year}{jday}-rrs490-bal-hr.nc')
 
             if os.path.exists(file_multi) and os.path.exists(file_olci):
                 print(f'[INFO] Making date: {date_here}')
-                file_out = os.path.join(dir_out,f'Comparison_RRS443_{year}{jday}.csv')
-                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS443','RRS442_5')
+                file_out = os.path.join(dir_out,f'Comparison_RRS490_{year}{jday}.csv')
+                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS490','RRS490')
         date_here = date_here + timedelta(hours=240)
 
     # getting global points
