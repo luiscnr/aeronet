@@ -241,14 +241,14 @@ def do_comparison_bal_multi_olci():
         if os.path.exists(dir_olci) and os.path.exists(dir_multi):
 
             #chla,rrs442_5,rrs490,rrs510,rrs560,rrs665
-            file_olci =os.path.join(dir_olci,f'O{year}{jday}-rrs670-bal-fr.nc')
+            file_olci =os.path.join(dir_olci,f'O{year}{jday}-rrs665-bal-fr.nc')
             # chla,rrs443,rrs490,rrs510,rrs560,rrs665
-            file_multi = os.path.join(dir_multi,f'C{year}{jday}-rrs670-bal-hr.nc')
+            file_multi = os.path.join(dir_multi,f'C{year}{jday}-rrs665-bal-hr.nc')
 
             if os.path.exists(file_multi) and os.path.exists(file_olci):
                 print(f'[INFO] Making date: {date_here}')
                 file_out = os.path.join(dir_out,f'Comparison_RRS670_{year}{jday}.csv')
-                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS670','RRS670')
+                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS665','RRS665')
         date_here = date_here + timedelta(hours=240)
 
     # getting global points
