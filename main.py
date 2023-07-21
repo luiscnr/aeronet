@@ -21,29 +21,213 @@ args = parser.parse_args()
 
 from base.anet_file import ANETFile
 
+
 def only_test_two():
     file = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/CHLA_DATA/Baltic_CHLA_Valid.csv'
     from insitu.csv_insitu_file import CSVInsituFile
     ipv = CSVInsituFile(file)
     return True
 
+
 def only_test_three():
     from restoweb.resto import RESTO_WEB
     fout = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/ResTO_WispWeb/Test.nc'
     rweb = RESTO_WEB(True)
-    rweb.retrive_data(datetime.datetime.strptime('2021-05-10','%Y-%m-%d'),datetime.datetime.strptime('2021-05-15','%Y-%m-%d'),None)
+    rweb.retrive_data(datetime.datetime.strptime('2021-05-10', '%Y-%m-%d'),
+                      datetime.datetime.strptime('2021-05-15', '%Y-%m-%d'), None)
     rweb.save_data_as_ncfile(fout)
     return True
 
-def only_test_four():
+
+def only_test_four_prev():
+    from datetime import timedelta
+    import pandas as pd
+    from datetime import datetime as dt
+    dir_base = '/mnt/c/DATA_LUIS/octac_work/bal_evolution/EXAMPLES/TRIMMED/MDBs/PLOT_OTHER'
+    file_chla = os.path.join(dir_base, 'Baltic_CHLA_Valid_WithBrando2021.csv')
+    df = pd.read_csv(file_chla, sep=';')
+    date_array = np.array(df['DATE'])
+    time_array = np.array(df['HOUR'])
+    source = np.array(df['LONGITUDE'])
+    times = []
+    for idx in range(len(date_array)):
+        datestr = f'{date_array[idx]}T{time_array[idx]}'
+        datehere = dt.strptime(datestr, '%d/%m/%YT%H:%M:%S')
+        times.append(datehere.strftime('%Y%m%d%H%M'))
+        print(times[idx])
+
+    #file_out = os.path.join(dir_base, 'MDB___CCI_INSITU_19970101_20221231_4P5hours.csv')
+    file_out = os.path.join(dir_base, 'MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv')
+    fs = os.path.join(dir_base, 'longitudespolymer.csv')
+    f1 = open(fs, 'w')
+    f1.write('LONGITUDE')
+    dfout = pd.read_csv(file_out, sep=';')
+    dateout = dfout['Ins_Time']
+    for dout in dateout:
+        datehere = dt.strptime(dout, '%Y-%m-%d %H:%M')
+        dateherestr = datehere.strftime('%Y%m%d%H%M')
+        sourcew = '-1'
+        if dateherestr in times:
+            itime = times.index(dateherestr)
+            sourcew = str(float(source[itime]))
+        else:
+            datehere = datehere + timedelta(hours=2)
+            dateherestr = datehere.strftime('%Y%m%d%H%M')
+            if dateherestr in times:
+                itime = times.index(dateherestr)
+                sourcew = str(float(source[itime]))
+            else:
+                datehere = datehere - timedelta(hours=1)
+                dateherestr = datehere.strftime('%Y%m%d%H%M')
+                if dateherestr in times:
+                    itime = times.index(dateherestr)
+                    sourcew = str(float(source[itime]))
+        f1.write('\n')
+        f1.write(sourcew)
+
+    f1.close()
+
+    return True
+
+
+def only_test_six():
+    import shutil
+    #file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/CHLA_COMMON_LATLON.csv'
+    file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv'
+    dir_images = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/L1B'
+    dir_copy = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/L1B_MATCH-UPS'
+    import pandas as pd
+    df = pd.read_csv(file_lat_lon, sep=';')
+    for index, row in df.iterrows():
+        granule_s3a = row['GRANULES_S3A']
+        granule_s3b = row['GRANULES_S3B']
+        #print(granule_s3a,granule_s3b)
+        if granule_s3a!='NODATA':
+            file_s3a = os.path.join(dir_images,granule_s3a)
+            #print(file_s3a,os.path.exists(file_s3a))
+            if not os.path.exists(file_s3a):
+                print('ATTENTIONS MISSING: ',file_s3a)
+            else:
+                print(file_s3a)
+                fnew = os.path.join(dir_copy,granule_s3a)
+                if not os.path.exists(fnew):
+                    shutil.copytree(file_s3a,fnew)
+        if granule_s3b!='NODATA':
+            file_s3b = os.path.join(dir_images,granule_s3b)
+            #print(file_s3b,os.path.exists(file_s3b))
+            if not os.path.exists(file_s3b):
+                print('ATTENTIONS MISSING: ', file_s3b)
+            else:
+                print(file_s3b)
+                fnew = os.path.join(dir_copy, granule_s3b)
+                if not os.path.exists(fnew):
+                    shutil.copytree(file_s3b, fnew)
+    return True
+def only_test_six_prev():
+    #file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/CHLA_COMMON_LATLON.csv'
+    file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv'
+    dir_images = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/L1B'
+    import pandas as pd
+    from datetime import datetime as dt
+    from netCDF4 import Dataset
+    import numpy as np
+
+    limits_granule = {}
+    for name in os.listdir(dir_images):
+        file_geo = os.path.join(dir_images, name, 'geo_coordinates.nc')
+        dgeo = Dataset(file_geo)
+        lat_array = np.array(dgeo.variables['latitude'])
+        lon_array = np.array(dgeo.variables['longitude'])
+        limits_granule[name] = {
+            'minlat': lat_array.min(),
+            'maxlat': lat_array.max(),
+            'minlon': lon_array.min(),
+            'maxlon': lon_array.max(),
+        }
+        # print(name,limits_granule[name])
+        dgeo.close()
+
+    df = pd.read_csv(file_lat_lon, sep=';')
+
+    granules_s3a = []
+    granules_s3b = []
+    for index, row in df.iterrows():
+        latp = row['LATITUDE']
+        lonp = row['LONGITUDE']
+        timestr = row['Ins_Time']
+        time = dt.strptime(timestr, '%Y-%m-%d %H:%M')
+        datestr = time.strftime('%Y%m%d')
+
+        wce_s3a = f'S3A_OL_1_EFR____{datestr}'
+        wce_s3b = f'S3B_OL_1_EFR____{datestr}'
+        print('----------------------------------------------------')
+        print(latp, lonp, timestr, wce_s3a, wce_s3b)
+        granule_s3a = 'N/A'
+        granule_s3b = 'N/A'
+        for name in limits_granule:
+            # if not name.startswith(wce_s3a) or not name.startswith(wce_s3b):
+            #     continue
+
+            if limits_granule[name]['minlat'] <= latp <= limits_granule[name]['maxlat']:
+                if limits_granule[name]['minlon'] <= lonp <= limits_granule[name]['maxlon']:
+                    if name.startswith(wce_s3a) and granule_s3a == 'N/A':
+                        granule_s3a = name
+                        print('**** ', name, granule_s3a)
+                    if name.startswith(wce_s3b) and granule_s3b == 'N/A':
+                        granule_s3b = name
+                        print('**** ', name, granule_s3b)
+        granules_s3a.append(granule_s3a)
+        granules_s3b.append(granule_s3b)
+    # print('*********************************')
+    # for ga in granules_s3a:
+    #     print(ga)
+    print('**************************')
+    for gb in granules_s3b:
+        print(gb)
+
+    return True
+
+
+def only_test_five():
+    file_with_latlot = '/mnt/c/DATA_LUIS/octac_work/bal_evolution/EXAMPLES/TRIMMED/MDBs/PLOT_OTHER/MDB___CCI_INSITU_19970101_20221231_4P5hours.csv'
+    dir_base = '/mnt/c/data_luis/octac_work/bal_evolution/examples/chla/publication'
+    name_in = 'MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv'
+    name_out = 'MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid_LATLON.csv'
+    file_in = os.path.join(dir_base, name_in)
+    file_out = os.path.join(dir_base, name_out)
+    import pandas as pd
+    datall = pd.read_csv(file_with_latlot, sep=';')
+    dataf = pd.read_csv(file_in, sep=';')
+    dataout = dataf.copy()
+    latout = []
+    lonout = []
+    for index, row in dataf.iterrows():
+        index_mu = row['Index_MU']
+        # if index_mu>220:
+        #     continue
+        row_ll = datall.loc[datall['Index_MU'] == index_mu]
+        lat_here = row_ll['LATITUDE'].tolist()
+        lon_here = row_ll['LONGITUDE'].tolist()
+        latout.append(lat_here[0])
+        lonout.append(lon_here[0])
+    dataout['LATITUDE'] = latout
+    dataout['LONGITUDE'] = lonout
+
+    dataout.to_csv(file_out, sep=';')
+
+    return True
+
+
+def baltic_figure1():
     print('BALTIC FIGURE')
+    dir_base = '/mnt/c/DATA_LUIS/octac_work/bal_evolution/EXAMPLES/TRIMMED/MDBs/PLOT_OTHER'
     import matplotlib.pyplot as plt
     import cartopy.crs as ccrs
     import cartopy
 
     ax = plt.axes(projection=ccrs.Miller())
     ax.set_extent([10, 31, 53, 67], crs=ccrs.PlateCarree())
-    #ax.coastlines()
+    # ax.coastlines()
 
     import cartopy.feature as cfeature
     land_50m = cfeature.NaturalEarthFeature('physical', 'land', '10m',
@@ -51,20 +235,118 @@ def only_test_four():
                                             facecolor=cfeature.COLORS['land'])
 
     ax.add_feature(land_50m)
-    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black', scale='50m')
-    #
-    #
 
-    fout = '/mnt/c/DATA_LUIS/octac_work/bal_evolution/Figure1.tif'
-    plt.savefig(fout,dpi=300,bbox_inches = 'tight')
+    # ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black', scale='50m')
+
+    file_transects = os.path.join(dir_base, 'RFLEX_2016_Stefan_NIR_corrected.csv')
+    import pandas as pd
+    from datetime import datetime as dt
+    df = pd.read_csv(file_transects, sep=',')
+    times = np.array(df['time'])
+    latitude = np.array(df['lat'])
+    longitude = np.array(df['lon'])
+    dates = []
+    alldates = []
+    latdates = []
+    londates = []
+    for idx in range(len(times)):
+        time = times[idx]
+        time_here = dt.strptime(time, '%Y-%m-%d %H:%M:%S')
+        date_here = time_here.replace(hour=0, minute=0, second=0, microsecond=0)
+        if time_here.year == 2016 and time_here.month >= 5:
+            alldates.append(time_here.timestamp())
+            dates.append(date_here.timestamp())
+            latdates.append(latitude[idx])
+            londates.append(longitude[idx])
+        # print(time_here)
+
+    alldates = np.array(alldates)
+    dates = np.array(dates)
+    latdates = np.array(latdates)
+    londates = np.array(londates)
+    dates_unique = np.unique(dates)
+
+    for date in dates_unique:
+        print(date)
+        dateshere = alldates[dates == date]
+        lat_date = latdates[dates == date]
+        lon_date = londates[dates == date]
+
+        lat_date_plot = []
+        lon_date_plot = []
+
+        for idx in range(1, len(lat_date)):
+            time_dif = dateshere[idx] - dateshere[idx - 1]
+            if time_dif > 0:
+                lat_date_plot.append(lat_date[idx])
+                lon_date_plot.append(lon_date[idx])
+            else:
+                if len(lat_date) > 1:
+                    ax.plot(lon_date_plot, lat_date_plot, color='gray', linewidth=1, marker=None,
+                            transform=ccrs.Geodetic())
+                lat_date_plot = []
+                lon_date_plot = []
+
+        if len(lat_date) > 1:
+            ax.plot(lon_date_plot, lat_date_plot, color='gray', linewidth=1, marker=None, transform=ccrs.Geodetic())
+
+    file_chla = os.path.join(dir_base, 'MDB___CCI_INSITU_19970101_20221231_4P5hours.csv')
+    df = pd.read_csv(file_chla, sep=';')
+    lat_array = np.array(df['LATITUDE'])
+    lon_array = np.array(df['LONGITUDE'])
+    year = np.array(df['YEAR'])
+    source = np.array(df['SOURCENUM'])
+    sources = [1, 2]
+    symbols = ['x', '+']
+    periods = ['MULTI', 'OLCI']
+    for period in periods:
+        if period == 'MULTI':
+            lat_p = lat_array[year < 2016]
+            lon_p = lon_array[year < 2016]
+            source_p = source[year < 2016]
+            color_p = 'r'
+        if period == 'OLCI':
+            lat_p = lat_array[year >= 2016]
+            lon_p = lon_array[year >= 2016]
+            source_p = source[year >= 2016]
+            color_p = 'b'
+        for idx in range(2):
+            s = sources[idx]
+            symbol = symbols[idx]
+            lat_plot = lat_p[source_p == s]
+            lon_plot = lon_p[source_p == s]
+            print(period, s, len(lat_plot))
+            ax.plot(lon_plot, lat_plot, color=color_p, linewidth=0, marker=symbol, markersize=4,
+                    transform=ccrs.Geodetic())
+
+    # stations
+    ax.plot([17.467], [58.594], color='green', marker='o', markersize=5, transform=ccrs.Geodetic())  # GDL
+    ax.plot([24.926], [59.949], color='green', marker='o', markersize=5, transform=ccrs.Geodetic())  # HLH
+    ax.plot([21.723], [57.751], color='green', marker='o', markersize=5, transform=ccrs.Geodetic())  # ILH
+
+    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                      linewidth=0.5, color='black', alpha=0.6, linestyle=':')
+
+    import matplotlib.ticker as mticker
+    gl.xlocator = mticker.FixedLocator([15, 12, 18, 21, 24, 27, 30])
+    gl.ylocator = mticker.FixedLocator([54, 57, 60, 63, 66])
+    gl.xlabel_style = {'size': 10}
+    gl.ylabel_style = {'size': 10}
+
+    fout = os.path.join(dir_base, 'Figure1.png')
+
+    plt.savefig(fout, dpi=300, bbox_inches='tight')
 
     return True
+
+
 def main():
-    b = only_test_four()
+    # b = baltic_figure1()
+    b = only_test_six()
     if b:
         return
-    #to run script loca:
-    #python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
+    # to run script loca:
+    # python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
     dir_base = args.inputpath
     dir_output = args.outputpath
@@ -105,8 +387,8 @@ def main():
 
     sites = None
     if args.sites:
-        if args.sites=='BAL':
-            sites = ['Gustav_Dalen_Tower','Irbe_Lighthouse','Helsinki_Lighthouse']
+        if args.sites == 'BAL':
+            sites = ['Gustav_Dalen_Tower', 'Irbe_Lighthouse', 'Helsinki_Lighthouse']
 
     dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
     dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
@@ -122,7 +404,7 @@ def main():
             if site not in sites:
                 do_site = False
 
-        #if site == 'Gloria':
+        # if site == 'Gloria':
         if do_site:
             if args.verbose:
                 print('DOING SITE:', site, '-----------------------------------------')
@@ -230,26 +512,28 @@ def only_test():
     idx = 0
     for i in range(len(dfpanthyr.index)):
         date_here = datetime.datetime.strptime(dfpanthyr.iloc[i].at['TIME'], '%Y-%m-%d %H:%M:%S')
-        print(i,date_here)
+        print(i, date_here)
         rrs_panthyr_values = np.array(dfpanthyr.iloc[i, iwl_start:iwl_end])
         rrs_hysptar_values, hypstar_time = get_nearest_hypernets_spectra(date_here, wllist)
         if rrs_hysptar_values is not None:
-            df_here = pd.DataFrame(columns=['ID','PanthyrTime','HypstarTime','Wavelength','PanthyrRRS','HypstarRRS'],index=range(len(wllist)))
-            indices = np.linspace(idx,idx+len(wllist),num = len(wllist),endpoint=False)
-            #print(indices)
+            df_here = pd.DataFrame(
+                columns=['ID', 'PanthyrTime', 'HypstarTime', 'Wavelength', 'PanthyrRRS', 'HypstarRRS'],
+                index=range(len(wllist)))
+            indices = np.linspace(idx, idx + len(wllist), num=len(wllist), endpoint=False)
+            # print(indices)
             idx = idx + len(wllist)
             df_here.loc[:, 'ID'] = indices
             df_here.loc[:, 'PanthyrTime'] = date_here.strftime('%Y-%m-%d %H:%M')
             df_here.loc[:, 'HypstarTime'] = hypstar_time.strftime('%Y-%m-%d %H:%M')
-            df_here.loc[:,'Wavelength'] = wllist
-            df_here.loc[:,'PanthyrRRS'] = rrs_panthyr_values
-            df_here.loc[:,'HypstarRRS'] = rrs_hysptar_values
-            #print(rrs_hysptar_values, len(rrs_hysptar_values))
+            df_here.loc[:, 'Wavelength'] = wllist
+            df_here.loc[:, 'PanthyrRRS'] = rrs_panthyr_values
+            df_here.loc[:, 'HypstarRRS'] = rrs_hysptar_values
+            # print(rrs_hysptar_values, len(rrs_hysptar_values))
             if df_fin is None:
                 df_fin = df_here
             else:
-                df_fin = pd.concat([df_fin,df_here])
-    df_fin.to_csv(file_out,sep=';')
+                df_fin = pd.concat([df_fin, df_here])
+    df_fin.to_csv(file_out, sep=';')
     return True
 
 
@@ -284,10 +568,10 @@ def get_nearest_hypernets_spectra(date_here, wllist):
                     if ma.is_masked(val):
                         hyp_valid = False
                         break
-                    if val<0 and wlhere<500:
+                    if val < 0 and wlhere < 500:
                         hyp_valid = False
                         break
-                    if val>0.01:
+                    if val > 0.01:
                         hyp_valid = False
                         break
                 if hyp_valid:
@@ -297,14 +581,14 @@ def get_nearest_hypernets_spectra(date_here, wllist):
                         inear = np.argmin(np.abs(wlref - hyp_wl))
                         hyp_rrs_fin[idx] = hyp_rrs[inear]
                     hyp_time_fin = date_hypstar
-                    return hyp_rrs_fin,hyp_time_fin
+                    return hyp_rrs_fin, hyp_time_fin
                 else:
                     hyp_rrs_fin = None
 
             else:
                 hyp_rrs_fin = None
 
-    return hyp_rrs_fin,hyp_time_fin
+    return hyp_rrs_fin, hyp_time_fin
 
     # fout = os.path.join(path_folder,'Outliers_135.csv')
     # plist.save_outliers_asfile(1.5,fout)

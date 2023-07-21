@@ -14,10 +14,13 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
-                             'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci'])
+                             'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
+                             'comparison_med_multi_olci'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
+parser.add_argument('-sd', "--start_date", help="The Start Date - format YYYY-MM-DD ")
+parser.add_argument('-ed', "--end_date", help="The End Date - format YYYY-MM-DD ")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
 args = parser.parse_args()
 
@@ -158,6 +161,189 @@ def main():
     if args.mode == 'comparison_bal_multi_olci':
         do_comparison_bal_multi_olci()
 
+    if args.mode == 'comparison_med_multi_olci':
+        do_comparison_med_multi_olci()
+
+def do_comparison_med_multi_olci():
+    import pandas as pd
+    from netCDF4 import Dataset
+    import numpy as np
+
+
+    #input grid multi
+    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI/X2022153-chl-med-hr.nc'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/GridMultiMed.csv'
+    # dataset = Dataset(file_input)
+    # lat_array = np.array(dataset.variables['lat'])
+    # lon_array = np.array(dataset.variables['lon'])
+    # nlat = len(lat_array)
+    # nlon = len(lon_array)
+    # index = 1
+    # f1 = open(file_out,'w')
+    # line = f'Index;YMulti;XMulti;Latitude;Longitude'
+    # f1.write(line)
+    # for y in range(0,nlat,10):
+    #     for x in range(0,nlon,10):
+    #         lat_here = lat_array[y]
+    #         lon_here = lon_array[x]
+    #         line = f'{index};{y};{x};{lat_here};{lon_here}'
+    #         index = index +1
+    #         print(line)
+    #         f1.write('\n')
+    #         f1.write(line)
+    # f1.close()
+
+    #input grid olci
+    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI/O2022153-chl-med-fr.nc'
+    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/GridMultiMed.csv'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/GridOlciMed.csv'
+    #
+    # grid = pd.read_csv(file_grid,sep=';')
+    # lat_grid = grid['Latitude'].to_numpy()
+    # lon_grid = grid['Longitude'].to_numpy()
+    # dataset = Dataset(file_input)
+    # lat_array = np.array(dataset.variables['lat'])
+    # lon_array = np.array(dataset.variables['lon'])
+    # f1 = open(file_out,'w')
+    # line = f'Index;YOlci;XMOlci;Latitude;Longitude'
+    # f1.write(line)
+    # for idx in range(len(lat_grid)):
+    #     index = idx +1
+    #     lat_here = lat_grid[idx]
+    #     lon_here = lon_grid[idx]
+    #     y = np.argmin(np.abs(lat_array-lat_here))
+    #     x = np.argmin(np.abs(lon_array-lon_here))
+    #     line = f'{index};{y};{x};{lat_here};{lon_here}'
+    #     print(line)
+    #     f1.write('\n')
+    #     f1.write(line)
+    # f1.close()
+
+    # exampling of comparison
+    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/Grid.csv'
+    # file_olci = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/OLCI/O2016117-chl-bal-fr.nc'
+    # file_multi = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/MULTI/C2016117-chl-bal-hr.nc'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI//Comparison_chla_2016117.csv'
+    # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
+
+    ##comparison chla
+    print('[INFO] STARTED  COMPARISON...')
+    from datetime import datetime as dt
+    dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+    dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    #FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
+    param = args.input
+    #dir_out_base = '/store/COP2-OC-TAC/MED_COMPARISON_MULTI_OLCI'
+    dir_out_base = args.output
+    dir_out = os.path.join(dir_out_base,f'COMPARISON_{param}')
+    if not os.path.exists(dir_out):
+        os.mkdir(dir_out)
+    file_grid = os.path.join(dir_out_base,'GridMed.csv')
+    # start_date = dt(2016,5,1)
+    # end_date = dt(2016,5,2)
+    #end_date = dt(2022,12,31)
+    start_date = dt.strptime(args.start_date,'%Y-%m-%-%d')
+    end_date = dt.strptime(args.end_date,'%Y-%m-%d')
+    date_here = start_date
+    while date_here<=end_date:
+        #date_here_str = date_here.strftime('%Y%m%d')
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_olci = os.path.join(dir_olci_orig,year,jday)
+        dir_multi = os.path.join(dir_multi_orig,year,jday)
+        if os.path.exists(dir_olci) and os.path.exists(dir_multi):
+            file_olci =os.path.join(dir_olci,f'O{year}{jday}-{param.lower()}-med-fr.nc')
+            file_multi = os.path.join(dir_multi,f'X{year}{jday}-{param.lower()}-med-hr.nc')
+            if os.path.exists(file_multi) and os.path.exists(file_olci):
+                print(f'[INFO] Making date: {date_here}')
+                file_out = os.path.join(dir_out,f'Comparison_{param}_{year}{jday}.csv')
+                make_comparison_impl(file_grid,file_multi,file_olci,file_out,param,param)
+        date_here = date_here + timedelta(hours=240)
+
+    # getting global points
+    # val = 'CHLA'
+    # dir_comparison = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/{val}'
+    # val = val.lower()
+    # file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/{val}_points.csv'
+    #
+    # file_ref = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/rrs510_points.csv'
+    # #file_ref = None
+    # first_line = f'Date;Index;MultiVal;OlciVal'
+    # f1 = open(file_out,'w')
+    # f1.write(first_line)
+    # nfiles = 0
+    # if file_ref is None:
+    #     start_date = dt(2016, 5, 1)
+    #     end_date = dt(2022,12,31)
+    #     date_here = start_date
+    #
+    #     while date_here <= end_date:
+    #         year = date_here.strftime('%Y')
+    #         jday = date_here.strftime('%j')
+    #         file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
+    #         date_here_str = date_here.strftime('%Y-%m-%d')
+    #         print(date_here_str)
+    #         if os.path.exists(file_c):
+    #             nfiles = nfiles +1
+    #             points_here = pd.read_csv(file_c,sep=';')
+    #             for index,row in points_here.iterrows():
+    #                 multi_val = row['MultiVal']
+    #                 olci_val = row['OlciVal']
+    #                 index_here = row['Index']
+    #                 line=f'{date_here_str};{index_here};{multi_val};{olci_val}'
+    #                 f1.write('\n')
+    #                 f1.write(line)
+    #         date_here = date_here + timedelta(hours=240)  # 10 days
+    # else:
+    #     df_ref = pd.read_csv(file_ref,sep=';')
+    #     dates_ref = df_ref['Date']
+    #     index_ref = df_ref['Index']
+    #     nref = len(df_ref.index)
+    #     date_check = dt(2016,5,1)
+    #     print(date_check)
+    #     year = date_check.strftime('%Y')
+    #     jday = date_check.strftime('%j')
+    #     date_check_str = date_check.strftime('%Y-%m-%d')
+    #     file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
+    #     points_check_here = pd.read_csv(file_c, sep=';')
+    #     indices_check_here = points_check_here['Index'].to_numpy(dtype=np.int32).tolist()
+    #
+    #     nnodata = 0
+    #     ndata = 0
+    #     nfiles = 1
+    #     for idx in range(nref):
+    #         date_here = dt.strptime(str(dates_ref[idx]),'%Y-%m-%d')
+    #         index_here = int(index_ref[idx])
+    #         if date_here!=date_check:
+    #             print(date_check)
+    #             date_check = date_here
+    #             year = date_check.strftime('%Y')
+    #             jday = date_check.strftime('%j')
+    #             date_check_str = date_check.strftime('%Y-%m-%d')
+    #             file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
+    #             points_check_here = pd.read_csv(file_c, sep=';')
+    #             indices_check_here = points_check_here['Index'].to_numpy(dtype=np.int32).tolist()
+    #             nfiles = nfiles +1
+    #         if index_here in indices_check_here:
+    #             idx = indices_check_here.index(index_here)
+    #             multi_val = points_check_here.iloc[idx].at['MultiVal']
+    #             olci_val = points_check_here.iloc[idx].at['OlciVal']
+    #             line = f'{date_check_str};{index_here};{multi_val};{olci_val}'
+    #             f1.write('\n')
+    #             f1.write(line)
+    #             ndata = ndata + 1
+    #         else:
+    #             nnodata = nnodata +1
+    #
+    #
+    #
+    #     print('NFILES: ',nfiles)
+    #     print('NDATA: ', ndata)
+    #     print('NNODATA: ', nnodata)
+    #
+    # f1.close()
+    # print('NFILES: ',nfiles)
+
 def do_comparison_bal_multi_olci():
     import pandas as pd
     from netCDF4 import Dataset
@@ -221,110 +407,122 @@ def do_comparison_bal_multi_olci():
     # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
 
     ##comparison chla
-    print('[INFO] STARTED HARDCORED COMPARISON...')
-    from datetime import datetime as dt
-    dir_olci_orig = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
-    dir_multi_orig = '/store3/OC/CCI_v2017/daily_v202207'
-    #FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
-    dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/RRS670'
-    file_grid = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/Grid.csv'
-    start_date = dt(2016,5,1)
-    end_date = dt(2016,5,2)
-    #end_date = dt(2022,12,31)
-    date_here = start_date
-    while date_here<=end_date:
-        #date_here_str = date_here.strftime('%Y%m%d')
-        year = date_here.strftime('%Y')
-        jday = date_here.strftime('%j')
-        dir_olci = os.path.join(dir_olci_orig,year,jday)
-        dir_multi = os.path.join(dir_multi_orig,year,jday)
-        #print(date_here_str)
-        if os.path.exists(dir_olci) and os.path.exists(dir_multi):
-
-            #chla,rrs442_5,rrs490,rrs510,rrs560,rrs665
-            file_olci =os.path.join(dir_olci,f'O{year}{jday}-rrs665-bal-fr.nc')
-            # chla,rrs443,rrs490,rrs510,rrs560,rrs665
-            file_multi = os.path.join(dir_multi,f'C{year}{jday}-rrs665-bal-hr.nc')
-
-            if os.path.exists(file_multi) and os.path.exists(file_olci):
-                print(f'[INFO] Making date: {date_here}')
-                file_out = os.path.join(dir_out,f'Comparison_RRS670_{year}{jday}.csv')
-                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS665','RRS665')
-        date_here = date_here + timedelta(hours=240)
+    # print('[INFO] STARTED HARDCORED COMPARISON...')
+    # from datetime import datetime as dt
+    # dir_olci_orig = '/store/COP2-OC-TAC/BAL_Evolutions/BAL_REPROC'
+    # dir_multi_orig = '/store3/OC/CCI_v2017/daily_v202207'
+    # #FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
+    # dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/RRS670'
+    # file_grid = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/Grid.csv'
+    # start_date = dt(2016,5,1)
+    # end_date = dt(2016,5,2)
+    # #end_date = dt(2022,12,31)
+    # date_here = start_date
+    # while date_here<=end_date:
+    #     #date_here_str = date_here.strftime('%Y%m%d')
+    #     year = date_here.strftime('%Y')
+    #     jday = date_here.strftime('%j')
+    #     dir_olci = os.path.join(dir_olci_orig,year,jday)
+    #     dir_multi = os.path.join(dir_multi_orig,year,jday)
+    #     #print(date_here_str)
+    #     if os.path.exists(dir_olci) and os.path.exists(dir_multi):
+    #
+    #         #chla,rrs442_5,rrs490,rrs510,rrs560,rrs665
+    #         file_olci =os.path.join(dir_olci,f'O{year}{jday}-rrs665-bal-fr.nc')
+    #         # chla,rrs443,rrs490,rrs510,rrs560,rrs665
+    #         file_multi = os.path.join(dir_multi,f'C{year}{jday}-rrs665-bal-hr.nc')
+    #
+    #         if os.path.exists(file_multi) and os.path.exists(file_olci):
+    #             print(f'[INFO] Making date: {date_here}')
+    #             file_out = os.path.join(dir_out,f'Comparison_RRS670_{year}{jday}.csv')
+    #             make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS665','RRS665')
+    #     date_here = date_here + timedelta(hours=240)
 
     # getting global points
-    # val = 'RRS670'
-    # dir_comparison = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/{val}'
-    # val = val.lower()
-    # file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/{val}_points.csv'
-    #
-    # file_ref = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/chla_points.csv'
-    # #file_ref = None
-    # first_line = f'Date;Index;MultiVal;OlciVal'
-    # f1 = open(file_out,'w')
-    # f1.write(first_line)
-    # nfiles = 0
-    # if file_ref is None:
-    #     start_date = dt(2016, 5, 1)
-    #     end_date = dt(2022,12,31)
-    #     date_here = start_date
-    #
-    #     while date_here <= end_date:
-    #         year = date_here.strftime('%Y')
-    #         jday = date_here.strftime('%j')
-    #         file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
-    #         date_here_str = date_here.strftime('%Y-%m-%d')
-    #         print(date_here_str)
-    #         if os.path.exists(file_c):
-    #             nfiles = nfiles +1
-    #             points_here = pd.read_csv(file_c,sep=';')
-    #             for index,row in points_here.iterrows():
-    #                 multi_val = row['MultiVal']
-    #                 olci_val = row['OlciVal']
-    #                 index_here = row['Index']
-    #                 line=f'{date_here_str};{index_here};{multi_val};{olci_val}'
-    #                 f1.write('\n')
-    #                 f1.write(line)
-    #         date_here = date_here + timedelta(hours=240)  # 10 days
-    # else:
-    #     df_ref = pd.read_csv(file_ref,sep=';')
-    #     dates_ref = df_ref['Date']
-    #     index_ref = df_ref['Index']
-    #     nref = len(df_ref.index)
-    #     date_check = dt(2016,5,1)
-    #     indices_check = []
-    #     for idx in range(nref):
-    #         date_here = dt.strptime(str(dates_ref[idx]),'%Y-%m-%d')
-    #         index_here = int(index_ref[idx])
-    #         if date_here==date_check:
-    #             indices_check.append(index_here)
-    #         else:
-    #             year = date_check.strftime('%Y')
-    #             jday = date_check.strftime('%j')
-    #             date_check_str = date_check.strftime('%Y-%m-%d')
-    #             file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
-    #             if os.path.exists(file_c):
-    #                 nfiles = nfiles + 1
-    #                 points_here = pd.read_csv(file_c, sep=';')
-    #                 for index, row in points_here.iterrows():
-    #                     multi_val = row['MultiVal']
-    #                     olci_val = row['OlciVal']
-    #                     index_row = row['Index']
-    #                     if index_row in indices_check:
-    #                         line = f'{date_check_str};{index_row};{multi_val};{olci_val}'
-    #                         f1.write('\n')
-    #                         f1.write(line)
-    #             else:
-    #                 print('NO FILE FOR DATE: ',date_check)
-    #             date_check = date_here
-    #             indices_check = [index_here]
+    val = 'CHLA'
+    dir_comparison = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/{val}'
+    val = val.lower()
+    file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/{val}_points.csv'
+
+    file_ref = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/rrs510_points.csv'
+    #file_ref = None
+    first_line = f'Date;Index;MultiVal;OlciVal'
+    f1 = open(file_out,'w')
+    f1.write(first_line)
+    nfiles = 0
+    if file_ref is None:
+        start_date = dt(2016, 5, 1)
+        end_date = dt(2022,12,31)
+        date_here = start_date
+
+        while date_here <= end_date:
+            year = date_here.strftime('%Y')
+            jday = date_here.strftime('%j')
+            file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
+            date_here_str = date_here.strftime('%Y-%m-%d')
+            print(date_here_str)
+            if os.path.exists(file_c):
+                nfiles = nfiles +1
+                points_here = pd.read_csv(file_c,sep=';')
+                for index,row in points_here.iterrows():
+                    multi_val = row['MultiVal']
+                    olci_val = row['OlciVal']
+                    index_here = row['Index']
+                    line=f'{date_here_str};{index_here};{multi_val};{olci_val}'
+                    f1.write('\n')
+                    f1.write(line)
+            date_here = date_here + timedelta(hours=240)  # 10 days
+    else:
+        df_ref = pd.read_csv(file_ref,sep=';')
+        dates_ref = df_ref['Date']
+        index_ref = df_ref['Index']
+        nref = len(df_ref.index)
+        date_check = dt(2016,5,1)
+        print(date_check)
+        year = date_check.strftime('%Y')
+        jday = date_check.strftime('%j')
+        date_check_str = date_check.strftime('%Y-%m-%d')
+        file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
+        points_check_here = pd.read_csv(file_c, sep=';')
+        indices_check_here = points_check_here['Index'].to_numpy(dtype=np.int32).tolist()
+
+        nnodata = 0
+        ndata = 0
+        nfiles = 1
+        for idx in range(nref):
+            date_here = dt.strptime(str(dates_ref[idx]),'%Y-%m-%d')
+            index_here = int(index_ref[idx])
+            if date_here!=date_check:
+                print(date_check)
+                date_check = date_here
+                year = date_check.strftime('%Y')
+                jday = date_check.strftime('%j')
+                date_check_str = date_check.strftime('%Y-%m-%d')
+                file_c = os.path.join(dir_comparison, f'Comparison_{val}_{year}{jday}.csv')
+                points_check_here = pd.read_csv(file_c, sep=';')
+                indices_check_here = points_check_here['Index'].to_numpy(dtype=np.int32).tolist()
+                nfiles = nfiles +1
+            if index_here in indices_check_here:
+                idx = indices_check_here.index(index_here)
+                multi_val = points_check_here.iloc[idx].at['MultiVal']
+                olci_val = points_check_here.iloc[idx].at['OlciVal']
+                line = f'{date_check_str};{index_here};{multi_val};{olci_val}'
+                f1.write('\n')
+                f1.write(line)
+                ndata = ndata + 1
+            else:
+                nnodata = nnodata +1
 
 
 
+        print('NFILES: ',nfiles)
+        print('NDATA: ', ndata)
+        print('NNODATA: ', nnodata)
+
+    f1.close()
+    print('NFILES: ',nfiles)
 
 
-    # f1.close()
-    # print('NFILES: ',nfiles)
 def make_comparison_impl(file_grid,file_multi,file_olci,file_out,variable_multi,variable_olci):
     import pandas as pd
     from netCDF4 import Dataset
