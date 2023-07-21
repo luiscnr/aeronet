@@ -242,7 +242,7 @@ def do_comparison_med_multi_olci():
     # start_date = dt(2016,5,1)
     # end_date = dt(2016,5,2)
     #end_date = dt(2022,12,31)
-    start_date = dt.strptime(args.start_date,'%Y-%m-%-%d')
+    start_date = dt.strptime(args.start_date,'%Y-%m-%d')
     end_date = dt.strptime(args.end_date,'%Y-%m-%d')
     date_here = start_date
     while date_here<=end_date:
