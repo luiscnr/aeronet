@@ -234,7 +234,7 @@ def do_comparison_multi_olci():
     dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
-        params = ['KD490', 'RRS443', 'RRR490', 'RRS510', 'RRS560']
+        params = ['KD490', 'RRS443', 'RRS490', 'RRS510', 'RRS555']
     else:
         param = args.input
         params = [param]
