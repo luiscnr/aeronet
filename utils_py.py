@@ -245,10 +245,12 @@ def do_comparison_multi_olci():
 
     # dir_out_base = '/store/COP2-OC-TAC/MED_COMPARISON_MULTI_OLCI'
     dir_out_base = args.output
+    dir_outs = []
     for param in params:
         dir_out = os.path.join(dir_out_base, f'COMPARISON_{param}')
         if not os.path.exists(dir_out):
             os.mkdir(dir_out)
+        dir_outs.append(dir_out)
     file_grid = os.path.join(dir_out_base, f'Grid{region.capitalize()}.csv')
     # start_date = dt(2016,5,1)
     # end_date = dt(2016,5,2)
@@ -259,7 +261,7 @@ def do_comparison_multi_olci():
 
     while date_here <= end_date:
         # date_here_str = date_here.strftime('%Y%m%d')
-        for param in params:
+        for param,dir_out in zip(params,dir_outs):
             param_multi = param
             param_olci = param
             if param_multi == 'RRS443':
@@ -271,8 +273,8 @@ def do_comparison_multi_olci():
             dir_olci = os.path.join(dir_olci_orig, year, jday)
             dir_multi = os.path.join(dir_multi_orig, year, jday)
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
-                file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_multi.lower()}-{region}-fr.nc')
-                file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_olci.lower()}-{region}-hr.nc')
+                file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
+                file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_multi.lower()}-{region}-hr.nc')
                 if os.path.exists(file_multi) and os.path.exists(file_olci):
                     print(f'[INFO] Making date: {date_here}')
                     file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
