@@ -245,9 +245,10 @@ def do_comparison_multi_olci():
 
     # dir_out_base = '/store/COP2-OC-TAC/MED_COMPARISON_MULTI_OLCI'
     dir_out_base = args.output
-    dir_out = os.path.join(dir_out_base, f'COMPARISON_{param}')
-    if not os.path.exists(dir_out):
-        os.mkdir(dir_out)
+    for param in params:
+        dir_out = os.path.join(dir_out_base, f'COMPARISON_{param}')
+        if not os.path.exists(dir_out):
+            os.mkdir(dir_out)
     file_grid = os.path.join(dir_out_base, f'Grid{region.capitalize()}.csv')
     # start_date = dt(2016,5,1)
     # end_date = dt(2016,5,2)
