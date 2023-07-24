@@ -250,10 +250,10 @@ def do_comparison_multi_olci():
     ##comparison
     print('[INFO] STARTED  COMPARISON...')
     from datetime import datetime as dt
-    #dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
-    #dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
-    dir_olci_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI'
-    dir_multi_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI'
+    dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+    dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    #dir_olci_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI'
+    #dir_multi_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
         params = ['CHL','KD490']
