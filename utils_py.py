@@ -171,54 +171,74 @@ def do_comparison_multi_olci():
     from netCDF4 import Dataset
     import numpy as np
 
-    # input grid multi
-    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI/X2022153-chl-med-hr.nc'
-    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/GridMultiMed.csv'
-    # dataset = Dataset(file_input)
-    # lat_array = np.array(dataset.variables['lat'])
-    # lon_array = np.array(dataset.variables['lon'])
-    # nlat = len(lat_array)
-    # nlon = len(lon_array)
-    # index = 1
-    # f1 = open(file_out,'w')
-    # line = f'Index;YMulti;XMulti;Latitude;Longitude'
-    # f1.write(line)
-    # for y in range(0,nlat,10):
-    #     for x in range(0,nlon,10):
-    #         lat_here = lat_array[y]
-    #         lon_here = lon_array[x]
-    #         line = f'{index};{y};{x};{lat_here};{lon_here}'
-    #         index = index +1
-    #         print(line)
-    #         f1.write('\n')
-    #         f1.write(line)
-    # f1.close()
+    region = 'med'
+    if args.region:
+        region = args.region
+    dir_out_base = args.output
 
-    # input grid olci
-    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI/O2022153-chl-med-fr.nc'
-    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/GridMultiMed.csv'
-    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/GridOlciMed.csv'
-    #
-    # grid = pd.read_csv(file_grid,sep=';')
-    # lat_grid = grid['Latitude'].to_numpy()
-    # lon_grid = grid['Longitude'].to_numpy()
-    # dataset = Dataset(file_input)
-    # lat_array = np.array(dataset.variables['lat'])
-    # lon_array = np.array(dataset.variables['lon'])
-    # f1 = open(file_out,'w')
-    # line = f'Index;YOlci;XMOlci;Latitude;Longitude'
-    # f1.write(line)
-    # for idx in range(len(lat_grid)):
-    #     index = idx +1
-    #     lat_here = lat_grid[idx]
-    #     lon_here = lon_grid[idx]
-    #     y = np.argmin(np.abs(lat_array-lat_here))
-    #     x = np.argmin(np.abs(lon_array-lon_here))
-    #     line = f'{index};{y};{x};{lat_here};{lon_here}'
-    #     print(line)
-    #     f1.write('\n')
-    #     f1.write(line)
-    # f1.close()
+    do_grid = False
+    if args.input=='GRID':
+        do_grid = True
+
+    if do_grid:
+        #input grid multi
+        file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI/X2022153-chl-bs-hr.nc'
+        file_out = os.path.join(dir_out_base,f'GridMulti{region.capitalize()}.csv')
+        dataset = Dataset(file_input)
+        lat_array = np.array(dataset.variables['lat'])
+        lon_array = np.array(dataset.variables['lon'])
+        nlat = len(lat_array)
+        nlon = len(lon_array)
+        index = 1
+        f1 = open(file_out,'w')
+        line = f'Index;YMulti;XMulti;Latitude;Longitude'
+        f1.write(line)
+        for y in range(0,nlat,10):
+            for x in range(0,nlon,10):
+                lat_here = lat_array[y]
+                lon_here = lon_array[x]
+                line = f'{index};{y};{x};{lat_here};{lon_here}'
+                index = index +1
+                print(line)
+                f1.write('\n')
+                f1.write(line)
+        f1.close()
+
+        #input grid olci
+        file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI/O2022153-chl-med-fr.nc'
+        file_grid = os.path.join(dir_out_base,f'GridMulti{region.capitalize()}.csv')
+        file_out = os.path.join(dir_out_base,f'GridOlci{region.capitalize()}.csv')
+
+        grid = pd.read_csv(file_grid,sep=';')
+        lat_grid = grid['Latitude'].to_numpy()
+        lon_grid = grid['Longitude'].to_numpy()
+        dataset = Dataset(file_input)
+        lat_array = np.array(dataset.variables['lat'])
+        lon_array = np.array(dataset.variables['lon'])
+        f1 = open(file_out,'w')
+        line = f'Index;YOlci;XOlci;Latitude;Longitude'
+        f1.write(line)
+        for idx in range(len(lat_grid)):
+            index = idx +1
+            lat_here = lat_grid[idx]
+            lon_here = lon_grid[idx]
+            y = np.argmin(np.abs(lat_array-lat_here))
+            x = np.argmin(np.abs(lon_array-lon_here))
+            line = f'{index};{y};{x};{lat_here};{lon_here}'
+            print(line)
+            f1.write('\n')
+            f1.write(line)
+        f1.close()
+
+        file_end = os.path.join(dir_out_base, f'Grid{region.capitalize()}.csv')
+        dfmulti = pd.read_csv(file_grid,sep=';')
+        dfolci = pd.read_csv(file_out,sep=';')
+        dfmulti['YOlci'] = dfolci['YOlci']
+        dfmulti['XOlci'] = dfolci['XOlci']
+        dfmulti['MultiVal'] = -999.0
+        dfmulti['OlciVal'] = -999.0
+        dfmulti['Valid'] = 0
+    return
 
     # exampling of comparison
     # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/Grid.csv'
@@ -245,12 +265,7 @@ def do_comparison_multi_olci():
         param = args.input
         params = [param]
 
-    region = 'med'
-    if args.region:
-        region = args.region
 
-    # dir_out_base = '/store/COP2-OC-TAC/MED_COMPARISON_MULTI_OLCI'
-    dir_out_base = args.output
     dir_outs = []
     for param in params:
         dir_out = os.path.join(dir_out_base, f'COMPARISON_{param}')
