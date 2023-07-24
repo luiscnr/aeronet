@@ -292,16 +292,11 @@ def do_comparison_multi_olci():
         dfgrid.to_csv(file_new_grid,sep=';')
         file_grid = file_new_grid
 
-
-    # start_date = dt(2016,5,1)
-    # end_date = dt(2016,5,2)
-    # end_date = dt(2022,12,31)
     start_date = dt.strptime(args.start_date, '%Y-%m-%d')
     end_date = dt.strptime(args.end_date, '%Y-%m-%d')
     date_here = start_date
 
     while date_here <= end_date:
-        # date_here_str = date_here.strftime('%Y%m%d')
         for param, dir_out in zip(params, dir_outs):
             param_multi = param
             param_olci = param
@@ -641,7 +636,8 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
     import pandas as pd
     from netCDF4 import Dataset
     import numpy as np
-    wl_values = [float(x) for x in wl_multi]
+    wl_multi = [float(x.replace('_','.')) for x in wl_multi]
+    wl_olci = [float(x.replace('_', '.')) for x in wl_olci]
     grid = pd.read_csv(file_grid, sep=';')
 
     num_m = len(files_multi)
