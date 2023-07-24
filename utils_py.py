@@ -636,6 +636,7 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
     import pandas as pd
     from netCDF4 import Dataset
     import numpy as np
+    from BSC_QAA import bsc_qaa_EUMETSAT as qaa
     wl_multi = [float(x.replace('_','.')) for x in wl_multi]
     wl_olci = [float(x.replace('_', '.')) for x in wl_olci]
     grid = pd.read_csv(file_grid, sep=';')
@@ -681,6 +682,7 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
             spectra_olci = np.mean(array_here_good_res,axis=1)
             if len(spectra_multi[spectra_multi!=-999])==num_m:
                 valid = 1
+                spectra_olci = qaa.bsc_qaa(spectra_olci,wl_olci,wl_multi)
         else:
             spectra_olci = np.array([-999.0]*num_o)
 
