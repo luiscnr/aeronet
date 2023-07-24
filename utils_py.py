@@ -238,7 +238,7 @@ def do_comparison_multi_olci():
         dfmulti['MultiVal'] = -999.0
         dfmulti['OlciVal'] = -999.0
         dfmulti['Valid'] = 0
-    return
+        return
 
     # exampling of comparison
     # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/Grid.csv'
@@ -250,17 +250,17 @@ def do_comparison_multi_olci():
     ##comparison
     print('[INFO] STARTED  COMPARISON...')
     from datetime import datetime as dt
-    # dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
-    # dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    #dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+    #dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
     dir_olci_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI'
     dir_multi_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
-        params = ['KD490', 'RRS443', 'RRS490', 'RRS510', 'RRS555']
+        params = ['CHL','KD490']
     elif args.input == 'RRS':
         params = ['RRS']
-        wl_multi = ['443', '490', '510', '555']
-        wl_olci = ['442_5', '490', '510', '560']
+        wl_multi = ['443', '490', '510', '555', '670']
+        wl_olci = ['442_5', '490', '510', '560','665']
     else:
         param = args.input
         params = [param]
@@ -637,8 +637,10 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
     from netCDF4 import Dataset
     import numpy as np
     from BSC_QAA import bsc_qaa_EUMETSAT as qaa
-    wl_multi = [float(x.replace('_','.')) for x in wl_multi]
-    wl_olci = [float(x.replace('_', '.')) for x in wl_olci]
+    import warnings
+    warnings.filterwarnings("ignore")
+    wl_output = [float(x.replace('_','.')) for x in wl_multi]
+    wl_input = [float(x.replace('_', '.')) for x in wl_olci]
     grid = pd.read_csv(file_grid, sep=';')
 
     num_m = len(files_multi)
@@ -682,7 +684,7 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
             spectra_olci = np.mean(array_here_good_res,axis=1)
             if len(spectra_multi[spectra_multi!=-999])==num_m:
                 valid = 1
-                spectra_olci = qaa.bsc_qaa(spectra_olci,wl_olci,wl_multi)
+                spectra_olci = qaa.bsc_qaa(spectra_olci,wl_input,wl_output)
         else:
             spectra_olci = np.array([-999.0]*num_o)
 
