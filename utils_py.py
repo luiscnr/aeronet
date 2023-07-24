@@ -227,14 +227,20 @@ def do_comparison_multi_olci():
     # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI//Comparison_chla_2016117.csv'
     # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
 
-    ##comparison chla
+    ##comparison
     print('[INFO] STARTED  COMPARISON...')
     from datetime import datetime as dt
-    dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
-    dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    # dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+    # dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    dir_olci_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI'
+    dir_multi_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
         params = ['KD490', 'RRS443', 'RRS490', 'RRS510', 'RRS555']
+    elif args.input == 'RRS':
+        params = ['RRS']
+        wl_multi = ['443', '490', '510', '555']
+        wl_olci = ['442_5', '490', '510', '560']
     else:
         param = args.input
         params = [param]
@@ -252,6 +258,26 @@ def do_comparison_multi_olci():
             os.mkdir(dir_out)
         dir_outs.append(dir_out)
     file_grid = os.path.join(dir_out_base, f'Grid{region.capitalize()}.csv')
+    if args.input == 'RRS':
+        col_names_multi = []
+        col_names_olci = []
+        file_new_grid = os.path.join(dir_out_base,f'Grid{region.capitalize()}_BandShifting.csv')
+        dfgrid = pd.read_csv(file_grid,sep=';')
+
+        for wl in wl_multi:
+            new_col = f'MultiVal_RRS_{wl}'
+            col_names_multi.append(new_col)
+            dfgrid[new_col]=-999.0
+        for wl in wl_multi: #BAND SHIFTING FROM OLCI TO MULTI
+            new_col = f'OlciVal_RRS_{wl}'
+            col_names_olci.append(new_col)
+            dfgrid[new_col]=-999.0
+        dfgrid = dfgrid.drop('MultiVal',axis=1)
+        dfgrid = dfgrid.drop('OlciVal',axis=1)
+        dfgrid.to_csv(file_new_grid,sep=';')
+        file_grid = file_new_grid
+
+
     # start_date = dt(2016,5,1)
     # end_date = dt(2016,5,2)
     # end_date = dt(2022,12,31)
@@ -261,7 +287,7 @@ def do_comparison_multi_olci():
 
     while date_here <= end_date:
         # date_here_str = date_here.strftime('%Y%m%d')
-        for param,dir_out in zip(params,dir_outs):
+        for param, dir_out in zip(params, dir_outs):
             param_multi = param
             param_olci = param
             if param_multi == 'RRS443':
@@ -273,12 +299,31 @@ def do_comparison_multi_olci():
             dir_olci = os.path.join(dir_olci_orig, year, jday)
             dir_multi = os.path.join(dir_multi_orig, year, jday)
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
-                file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
-                file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_multi.lower()}-{region}-hr.nc')
-                if os.path.exists(file_multi) and os.path.exists(file_olci):
-                    print(f'[INFO] Making date: {date_here}')
-                    file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
-                    make_comparison_impl(file_grid, file_multi, file_olci, file_out, param_multi, param_olci)
+                if param_multi == 'RRS':  ##different RRS applying band shif from OLCI to MULTI
+
+                    files_olci = []
+                    files_multi = []
+                    do_proc = True
+                    for wlm, wlo in zip(wl_multi, wl_olci):
+                        file_olci = os.path.join(dir_olci, f'O{year}{jday}-rrs{wlo}-{region}-fr.nc')
+                        file_multi = os.path.join(dir_multi, f'X{year}{jday}-rrs{wlm}-{region}-hr.nc')
+                        if os.path.exists(file_olci) and os.path.exists(file_multi):
+                            files_olci.append(file_olci)
+                            files_multi.append(file_multi)
+                        else:
+                            do_proc = False
+                            break
+                    if do_proc:
+                        file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
+                        make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_out, wl_multi,
+                                                           wl_olci,col_names_multi,col_names_olci)
+                else:
+                    file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
+                    file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_multi.lower()}-{region}-hr.nc')
+                    if os.path.exists(file_multi) and os.path.exists(file_olci):
+                        print(f'[INFO] Making date: {date_here}')
+                        file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
+                        make_comparison_impl(file_grid, file_multi, file_olci, file_out, param_multi, param_olci)
         date_here = date_here + timedelta(hours=240)
 
     # getting global points
@@ -576,6 +621,65 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
     grid_valid = grid[grid['Valid'] == 1]
     grid_valid.to_csv(file_out, sep=';')
 
+
+def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_out, wl_multi, wl_olci, col_names_multi,col_names_olci):
+    import pandas as pd
+    from netCDF4 import Dataset
+    import numpy as np
+    wl_values = [float(x) for x in wl_multi]
+    grid = pd.read_csv(file_grid, sep=';')
+
+    num_m = len(files_multi)
+    for idx in range(num_m):
+        file_multi = files_multi[idx]
+        wlm = wl_multi[idx]
+        dataset_multi = Dataset(file_multi)
+        variable_multi = f'RRS{wlm}'
+        array_m = np.array(dataset_multi.variables[variable_multi])
+        if idx == 0:
+            s = array_m.shape
+            array_multi = np.zeros((num_m, s[1], s[2]))
+        array_multi[idx, :, :] = array_m[0, :, :]
+        dataset_multi.close()
+
+    num_o = len(files_olci)
+    for idx in range(num_o):
+        file_olci = files_olci[idx]
+        wlo = wl_olci[idx]
+        dataset_olci = Dataset(file_olci)
+        variable_olci = f'RRS{wlo}'
+        array_o = np.array(dataset_olci.variables[variable_olci])
+        if idx == 0:
+            s = array_o.shape
+            array_olci = np.zeros((num_o, s[1], s[2]))
+        array_olci[idx, :, :] = array_o[0, :, :]
+        dataset_olci.close()
+    num_olci_good = num_o * 9
+
+    for index, row in grid.iterrows():
+        ymulti = int(row['YMulti'])
+        xmulti = int(row['XMulti'])
+        yolci = int(row['YOlci'])
+        xolci = int(row['XOlci'])
+        valid = 0
+        spectra_multi = array_multi[:, ymulti, xmulti]
+        array_here = array_olci[:, yolci - 1:yolci + 2, xolci - 1:xolci + 2]
+        array_here_good = array_here[array_here != -999]
+        if len(array_here_good)==num_olci_good:
+            array_here_good_res = np.reshape(array_here_good,(num_o,9))
+            spectra_olci = np.mean(array_here_good_res,axis=1)
+            if len(spectra_multi[spectra_multi!=-999])==num_m:
+                valid = 1
+        else:
+            spectra_olci = np.array([-999.0]*num_o)
+
+        grid.loc[index, 'Valid'] = valid
+        if valid==1:
+            grid.loc[index, col_names_multi] = spectra_multi
+            grid.loc[index, col_names_olci] = spectra_olci
+
+    grid_valid = grid[grid['Valid'] == 1]
+    grid_valid.to_csv(file_out, sep=';')
 
 def copy_files():
     # copy files with the dates indicated in the text file inputpath in output path
