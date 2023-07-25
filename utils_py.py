@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 import stat
 import subprocess
+import warnings
+
+warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(
     description="General utils")
@@ -18,6 +21,7 @@ parser.add_argument('-m', "--mode", help="Mode",
                              'comparison_multi_olci'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
+parser.add_argument('-fr', "--file_ref", help="File ref")
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
 parser.add_argument('-r', "--region", help="Region")
 parser.add_argument('-sd', "--start_date", help="The Start Date - format YYYY-MM-DD ")
@@ -177,53 +181,85 @@ def do_comparison_multi_olci():
     dir_out_base = args.output
 
     do_grid = False
-    if args.input=='GRID':
+    do_global = False
+    do_prepare_plot = False
+    do_reduce = False
+    if args.input == 'GRID':
         do_grid = True
 
+    if args.input.startswith('GLOBAL%'):
+        do_global = True
+
+    if args.input == 'PREPAREPLOT':
+        do_prepare_plot = True
+
+    if args.input == 'REDUCE':
+        do_reduce = True
+
     if do_grid:
-        #input grid multi
-        file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI/X2022153-chl-bs-hr.nc'
-        file_out = os.path.join(dir_out_base,f'GridMulti{region.capitalize()}.csv')
+        scale = 40
+        # input grid multi
+        # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/MULTI/2022/130/C2022130_chl-arc-4km.nc'
+        file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/OLCI/2022/130/O2022130_plankton-arc-fr.nc'
+        file_out = os.path.join(dir_out_base, f'GridMulti{region.capitalize()}.csv')
         dataset = Dataset(file_input)
         lat_array = np.array(dataset.variables['lat'])
         lon_array = np.array(dataset.variables['lon'])
-        nlat = len(lat_array)
-        nlon = len(lon_array)
+
+        if len(lat_array.shape) == 1:
+            nlat = len(lat_array)
+            nlon = len(lon_array)
+        elif len(lat_array.shape) == 2:
+            nlat = lat_array.shape[0]
+            nlon = lat_array.shape[1]
         index = 1
-        f1 = open(file_out,'w')
+        f1 = open(file_out, 'w')
         line = f'Index;YMulti;XMulti;Latitude;Longitude'
         f1.write(line)
-        for y in range(0,nlat,10):
-            for x in range(0,nlon,10):
-                lat_here = lat_array[y]
-                lon_here = lon_array[x]
+        for y in range(0, nlat, scale):
+            for x in range(0, nlon, scale):
+                if len(lat_array.shape) == 1:
+                    lat_here = lat_array[y]
+                    lon_here = lon_array[x]
+                elif len(lat_array.shape) == 2:
+                    lat_here = lat_array[y, x]
+                    lon_here = lon_array[y, x]
                 line = f'{index};{y};{x};{lat_here};{lon_here}'
-                index = index +1
+                index = index + 1
                 print(line)
                 f1.write('\n')
                 f1.write(line)
         f1.close()
 
-        #input grid olci
-        file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI/O2022153-chl-med-fr.nc'
-        file_grid = os.path.join(dir_out_base,f'GridMulti{region.capitalize()}.csv')
-        file_out = os.path.join(dir_out_base,f'GridOlci{region.capitalize()}.csv')
+        # input grid olci
+        # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/OLCI/2022/130/O2022130_plankton-arc-fr.nc'
+        file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/MULTI/2022/130/C2022130_chl-arc-4km.nc'
+        file_grid = os.path.join(dir_out_base, f'GridMulti{region.capitalize()}.csv')
+        file_out = os.path.join(dir_out_base, f'GridOlci{region.capitalize()}.csv')
 
-        grid = pd.read_csv(file_grid,sep=';')
+        grid = pd.read_csv(file_grid, sep=';')
         lat_grid = grid['Latitude'].to_numpy()
         lon_grid = grid['Longitude'].to_numpy()
         dataset = Dataset(file_input)
         lat_array = np.array(dataset.variables['lat'])
         lon_array = np.array(dataset.variables['lon'])
-        f1 = open(file_out,'w')
+        f1 = open(file_out, 'w')
         line = f'Index;YOlci;XOlci;Latitude;Longitude'
         f1.write(line)
         for idx in range(len(lat_grid)):
-            index = idx +1
+            index = idx + 1
             lat_here = lat_grid[idx]
             lon_here = lon_grid[idx]
-            y = np.argmin(np.abs(lat_array-lat_here))
-            x = np.argmin(np.abs(lon_array-lon_here))
+            if len(lat_array.shape) == 1:
+                y = np.argmin(np.abs(lat_array - lat_here))
+                x = np.argmin(np.abs(lon_array - lon_here))
+            elif len(lat_array.shape) == 2:
+                d = ((lat_array - lat_here) * (lat_array - lat_here)) + (
+                            (lon_array - lon_here) * (lon_array - lon_here))
+                ixs = np.unravel_index(np.argmin(d), d.shape)
+                y = ixs[0]
+                x = ixs[1]
+
             line = f'{index};{y};{x};{lat_here};{lon_here}'
             print(line)
             f1.write('\n')
@@ -231,13 +267,214 @@ def do_comparison_multi_olci():
         f1.close()
 
         file_end = os.path.join(dir_out_base, f'Grid{region.capitalize()}.csv')
-        dfmulti = pd.read_csv(file_grid,sep=';')
-        dfolci = pd.read_csv(file_out,sep=';')
+        dfmulti = pd.read_csv(file_grid, sep=';')
+        dfolci = pd.read_csv(file_out, sep=';')
         dfmulti['YOlci'] = dfolci['YOlci']
         dfmulti['XOlci'] = dfolci['XOlci']
         dfmulti['MultiVal'] = -999.0
         dfmulti['OlciVal'] = -999.0
         dfmulti['Valid'] = 0
+        dfmulti.to_csv(file_end, sep=';')
+        return
+
+    if do_global:
+        from datetime import datetime as dt
+        # getting global points
+
+        param = args.input.split('%')[1]
+        param_name = param
+        if param.startswith('RRS'):
+            param_name = 'RRS'
+        dir_comparison = os.path.join(dir_out_base, f'COMPARISON_{param_name}')
+
+        file_out = os.path.join(dir_out_base, f'{param.lower()}_points.csv')
+
+        # file_ref = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/rrs510_points.csv'
+        file_ref = None
+        if args.file_ref:
+            file_ref = args.file_ref
+        start_date = dt.strptime(args.start_date, '%Y-%m-%d')
+        end_date = dt.strptime(args.end_date, '%Y-%m-%d')
+
+        colMulti = 'MultiVal'
+        colOlci = 'OlciVal'
+        if param_name == 'RRS':
+            colMulti = f'{colMulti}_{param}'
+            colOlci = f'{colOlci}_{param}'
+
+        first_line = f'Date;Index;MultiVal;OlciVal'
+        f1 = open(file_out, 'w')
+        f1.write(first_line)
+        nfiles = 0
+        if file_ref is None:
+            date_here = start_date
+            while date_here <= end_date:
+                year = date_here.strftime('%Y')
+                jday = date_here.strftime('%j')
+                file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
+                date_here_str = date_here.strftime('%Y-%m-%d')
+                # print(date_here_str)
+                if os.path.exists(file_c):
+                    nfiles = nfiles + 1
+                    points_here = pd.read_csv(file_c, sep=';')
+                    for index, row in points_here.iterrows():
+                        multi_val = row[colMulti]
+                        olci_val = row[colOlci]
+                        index_here = row['Index']
+                        if (param == 'CHL' or param == 'KD490') and (multi_val < 0 or olci_val < 0):
+                            continue
+                        line = f'{date_here_str};{index_here};{multi_val};{olci_val}'
+                        f1.write('\n')
+                        f1.write(line)
+                date_here = date_here + timedelta(hours=240)  # 10 days
+        else:
+            df_ref = pd.read_csv(file_ref, sep=';')
+            dates_ref = df_ref['Date']
+            index_ref = df_ref['Index']
+            nref = len(df_ref.index)
+            date_check = start_date
+            # print(date_check)
+            year = date_check.strftime('%Y')
+            jday = date_check.strftime('%j')
+            date_check_str = date_check.strftime('%Y-%m-%d')
+            file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
+            points_check_here = pd.read_csv(file_c, sep=';')
+            indices_check_here = points_check_here['Index'].to_numpy(dtype=np.int32).tolist()
+
+            nnodata = 0
+            ndata = 0
+            nfiles = 1
+            for idx in range(nref):
+                date_here = dt.strptime(str(dates_ref[idx]), '%Y-%m-%d')
+                index_here = int(index_ref[idx])
+                if date_here != date_check:
+                    # print(date_check)
+                    date_check = date_here
+                    year = date_check.strftime('%Y')
+                    jday = date_check.strftime('%j')
+                    date_check_str = date_check.strftime('%Y-%m-%d')
+                    file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
+                    points_check_here = pd.read_csv(file_c, sep=';')
+                    indices_check_here = points_check_here['Index'].to_numpy(dtype=np.int32).tolist()
+                    nfiles = nfiles + 1
+                if index_here in indices_check_here:
+                    idx = indices_check_here.index(index_here)
+                    multi_val = points_check_here.iloc[idx].at[colMulti]
+                    olci_val = points_check_here.iloc[idx].at[colOlci]
+                    line = f'{date_check_str};{index_here};{multi_val};{olci_val}'
+                    f1.write('\n')
+                    f1.write(line)
+                    ndata = ndata + 1
+                else:
+                    nnodata = nnodata + 1
+
+            print('NFILES: ', nfiles)
+            print('NDATA: ', ndata)
+            print('NNODATA: ', nnodata)
+
+        f1.close()
+        print('NFILES: ', nfiles)
+        return
+
+    if do_prepare_plot:
+        from datetime import datetime as dt
+        indices = {}
+        nfiles = 0
+        for name in os.listdir(dir_out_base):
+            if not name.endswith('.csv'):
+                continue
+            nfiles = nfiles + 1
+            fname = os.path.join(dir_out_base, name)
+            print('------------------------>', fname)
+            df = pd.read_csv(fname, sep=';')
+            date_ref_ym = ''
+            for index, row in df.iterrows():
+                date_here = row['Date']
+                index_here = str(row['Index'])
+                date_here_ym = dt.strptime(date_here, '%Y-%m-%d').strftime('%Y%m')
+                di = f'{date_here}_{index_here}'
+                if date_here_ym != date_ref_ym:
+                    print(date_here_ym)
+                    date_ref_ym = date_here_ym
+
+                if di in indices:
+                    indices[di] = indices[di] + 1
+                else:
+                    indices[di] = 1
+            print('------------------------')
+        # indices_rep = []
+        # for di in indices:
+        #     if indices[di] == nfiles:
+        #         indices_rep.append(di)
+        # print(len(indices_rep))
+        # print('------------------------')
+
+        for name in os.listdir(dir_out_base):
+            if not name.endswith('.csv'):
+                continue
+            fname = os.path.join(dir_out_base, name)
+            fout = os.path.join(dir_out_base, f'{name[:-4]}_common.csv')
+            f1 = open(fout, 'w')
+            f1.write('Date;Index;MultiVal;OlciVal')
+            df = pd.read_csv(fname, sep=';')
+            print('------------------------>', fout)
+            for index, row in df.iterrows():
+                date_here = row['Date']
+                index_here = str(row['Index'])
+                date_here_ym = dt.strptime(date_here, '%Y-%m-%d').strftime('%Y%m')
+                di = f'{date_here}_{index_here}'
+                if date_here_ym != date_ref_ym:
+                    print(date_here_ym)
+                    date_ref_ym = date_here_ym
+                if indices[di] == nfiles:
+                    f1.write('\n')
+                    valMulti = row['MultiVal']
+                    valOlci = row['OlciVal']
+                    line = f'{date_here};{index_here};{valMulti};{valOlci}'
+                    f1.write(line)
+            f1.close()
+
+        return
+
+    if do_reduce:
+        file_input = args.file_ref
+        import pandas as pd
+        file_grid = os.path.join(dir_out_base, f'Grid{region.capitalize()}.csv')
+        indices = {}
+        df = pd.read_csv(file_grid, sep=';')
+        for index, row in df.iterrows():
+            index_here = str(int(row['Index']))
+            ymulti = float(row['YMulti'])
+            xmulti = float(row['XMulti'])
+            indices[index_here] = {
+                'YMulti': ymulti,
+                'XMulti': xmulti
+            }
+
+        name_in = file_input.split('/')[-1]
+        name_out = f'{name_in[:-4]}_reduced.csv'
+        file_out = file_input.replace(name_in, name_out)
+        f1 = open(file_out, 'w')
+        f1.write('Date;Index;MultiVal;OlciVal')
+        f2 = open(file_input, 'r')
+        for line in f2:
+            l = line.split(';')
+            if l[1].strip() == 'Index':
+                continue
+            try:
+                index_here = str(int(float(l[1].strip())))
+                ymulti_here = indices[index_here]['YMulti']
+                xmulti_here = indices[index_here]['XMulti']
+                if (ymulti_here % 10) == 0 and (xmulti_here % 10) == 0:
+                    f1.write('\n')
+                    f1.write(line.strip())
+
+            except:
+                pass
+
+        f2.close()
+        f1.close()
+
         return
 
     # exampling of comparison
@@ -250,21 +487,23 @@ def do_comparison_multi_olci():
     ##comparison
     print('[INFO] STARTED  COMPARISON...')
     from datetime import datetime as dt
-    dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
-    dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
-    #dir_olci_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/OLCI'
-    #dir_multi_orig = '/mnt/c/DATA_LUIS/OCTAC_WORK/MED_COMPARISON_OLCI_MULTI/MULTI'
+    # dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+    # dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
+    dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
-        params = ['CHL','KD490']
+        if args.region == 'arc':
+            params = ['RRS443', 'RRS490', 'RRS510', 'RRS560', 'RRS665']
+        else:
+            params = ['CHL', 'KD490']
     elif args.input == 'RRS':
         params = ['RRS']
-        wl_multi = ['443', '490', '510', '555', '670']
-        wl_olci = ['442_5', '490', '510', '560','665']
+        wl_multi = ['443', '490', '510', '560', '665']
+        wl_olci = ['442_5', '490', '510', '560', '665']
     else:
         param = args.input
         params = [param]
-
 
     dir_outs = []
     for param in params:
@@ -276,20 +515,20 @@ def do_comparison_multi_olci():
     if args.input == 'RRS':
         col_names_multi = []
         col_names_olci = []
-        file_new_grid = os.path.join(dir_out_base,f'Grid{region.capitalize()}_BandShifting.csv')
-        dfgrid = pd.read_csv(file_grid,sep=';')
+        file_new_grid = os.path.join(dir_out_base, f'Grid{region.capitalize()}_BandShifting.csv')
+        dfgrid = pd.read_csv(file_grid, sep=';')
 
         for wl in wl_multi:
             new_col = f'MultiVal_RRS_{wl}'
             col_names_multi.append(new_col)
-            dfgrid[new_col]=-999.0
-        for wl in wl_multi: #BAND SHIFTING FROM OLCI TO MULTI
+            dfgrid[new_col] = -999.0
+        for wl in wl_multi:  # BAND SHIFTING FROM OLCI TO MULTI
             new_col = f'OlciVal_RRS_{wl}'
             col_names_olci.append(new_col)
-            dfgrid[new_col]=-999.0
-        dfgrid = dfgrid.drop('MultiVal',axis=1)
-        dfgrid = dfgrid.drop('OlciVal',axis=1)
-        dfgrid.to_csv(file_new_grid,sep=';')
+            dfgrid[new_col] = -999.0
+        dfgrid = dfgrid.drop('MultiVal', axis=1)
+        dfgrid = dfgrid.drop('OlciVal', axis=1)
+        dfgrid.to_csv(file_new_grid, sep=';')
         file_grid = file_new_grid
 
     start_date = dt.strptime(args.start_date, '%Y-%m-%d')
@@ -297,26 +536,42 @@ def do_comparison_multi_olci():
     date_here = start_date
 
     while date_here <= end_date:
+
         for param, dir_out in zip(params, dir_outs):
+            # PARAMS, TO DEFINE FILE NAMES
             param_multi = param
             param_olci = param
             if param_multi == 'RRS443':
                 param_olci = 'RRS442_5'
             if param_multi == 'RRS555':
                 param_olci = 'RRS560'
+            if region == 'arc':
+                if param_multi == 'CHL':
+                    param_olci = 'PLANKTON'
+
+            var_multi = param_multi
+            var_olci = param_olci
+            if param_olci == 'PLANKTON':
+                var_olci = 'CHL'
+
             year = date_here.strftime('%Y')
             jday = date_here.strftime('%j')
             dir_olci = os.path.join(dir_olci_orig, year, jday)
             dir_multi = os.path.join(dir_multi_orig, year, jday)
+
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
                 if param_multi == 'RRS':  ##different RRS applying band shif from OLCI to MULTI
-
                     files_olci = []
                     files_multi = []
                     do_proc = True
                     for wlm, wlo in zip(wl_multi, wl_olci):
-                        file_olci = os.path.join(dir_olci, f'O{year}{jday}-rrs{wlo}-{region}-fr.nc')
-                        file_multi = os.path.join(dir_multi, f'X{year}{jday}-rrs{wlm}-{region}-hr.nc')
+                        if region == 'arc':
+                            file_multi = os.path.join(dir_multi, f'C{year}{jday}_{param_multi.lower()}-{region}-4km.nc')
+                            file_olci = os.path.join(dir_olci, f'O{year}{jday}_{param_olci.lower()}-{region}-fr.nc')
+                        else:
+                            file_olci = os.path.join(dir_olci, f'O{year}{jday}-rrs{wlo}-{region}-fr.nc')
+                            file_multi = os.path.join(dir_multi, f'X{year}{jday}-rrs{wlm}-{region}-hr.nc')
+
                         if os.path.exists(file_olci) and os.path.exists(file_multi):
                             files_olci.append(file_olci)
                             files_multi.append(file_multi)
@@ -326,14 +581,23 @@ def do_comparison_multi_olci():
                     if do_proc:
                         file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
                         make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_out, wl_multi,
-                                                           wl_olci,col_names_multi,col_names_olci)
+                                                           wl_olci, col_names_multi, col_names_olci)
                 else:
-                    file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
-                    file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_multi.lower()}-{region}-hr.nc')
+                    # file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
+                    if region == 'arc':
+                        if param_multi.startswith('RRS'):
+                            param_multi = 'RRS'
+                            param_olci = 'RRS'
+                        file_multi = os.path.join(dir_multi, f'C{year}{jday}_{param_multi.lower()}-{region}-4km.nc')
+                        file_olci = os.path.join(dir_olci, f'O{year}{jday}_{param_olci.lower()}-{region}-fr.nc')
+                    else:
+                        file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_multi.lower()}-{region}-hr.nc')
+                        file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
+
                     if os.path.exists(file_multi) and os.path.exists(file_olci):
                         print(f'[INFO] Making date: {date_here}')
                         file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
-                        make_comparison_impl(file_grid, file_multi, file_olci, file_out, param_multi, param_olci)
+                        make_comparison_impl(file_grid, file_multi, file_olci, file_out, var_multi, var_olci)
         date_here = date_here + timedelta(hours=240)
 
     # getting global points
@@ -603,6 +867,14 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
     import numpy as np
     import numpy.ma as ma
 
+    window_size = 3
+    if args.region:
+        if args.region == 'arc':
+            window_size = 13
+    wini = int(np.floor(window_size / 2))
+    wfin = int(np.ceil(window_size / 2))
+    nvalid = window_size * window_size
+
     grid = pd.read_csv(file_grid, sep=';')
     dataset_multi = Dataset(file_multi)
     dataset_olci = Dataset(file_olci)
@@ -615,11 +887,12 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         xolci = int(row['XOlci'])
         valid = 0
         val_multi = array_multi[0, ymulti, xmulti]
-        array_here = array_olci[0, yolci - 1:yolci + 2, xolci - 1:xolci + 2]
+        array_here = array_olci[0, yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
         array_here_good = array_here[array_here != -999]
         val_olci = -999
-        if len(array_here_good) == 9:
+        if len(array_here_good) == nvalid:
             val_olci = np.mean(array_here[array_here != -999])
+            val_olci = val_olci/np.pi
         if val_olci != -999 and val_multi != -999:
             valid = 1
         grid.loc[index, 'MultiVal'] = val_multi
@@ -632,14 +905,15 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
     grid_valid.to_csv(file_out, sep=';')
 
 
-def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_out, wl_multi, wl_olci, col_names_multi,col_names_olci):
+def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_out, wl_multi, wl_olci, col_names_multi,
+                                       col_names_olci):
     import pandas as pd
     from netCDF4 import Dataset
     import numpy as np
     from BSC_QAA import bsc_qaa_EUMETSAT as qaa
-    import warnings
-    warnings.filterwarnings("ignore")
-    wl_output = [float(x.replace('_','.')) for x in wl_multi]
+    # import warnings
+    # warnings.filterwarnings("ignore")
+    wl_output = [float(x.replace('_', '.')) for x in wl_multi]
     wl_input = [float(x.replace('_', '.')) for x in wl_olci]
     grid = pd.read_csv(file_grid, sep=';')
 
@@ -679,22 +953,23 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
         spectra_multi = array_multi[:, ymulti, xmulti]
         array_here = array_olci[:, yolci - 1:yolci + 2, xolci - 1:xolci + 2]
         array_here_good = array_here[array_here != -999]
-        if len(array_here_good)==num_olci_good:
-            array_here_good_res = np.reshape(array_here_good,(num_o,9))
-            spectra_olci = np.mean(array_here_good_res,axis=1)
-            if len(spectra_multi[spectra_multi!=-999])==num_m:
+        if len(array_here_good) == num_olci_good:
+            array_here_good_res = np.reshape(array_here_good, (num_o, 9))
+            spectra_olci = np.mean(array_here_good_res, axis=1)
+            if len(spectra_multi[spectra_multi != -999]) == num_m:
                 valid = 1
-                spectra_olci = qaa.bsc_qaa(spectra_olci,wl_input,wl_output)
+                spectra_olci = qaa.bsc_qaa(spectra_olci, wl_input, wl_output)
         else:
-            spectra_olci = np.array([-999.0]*num_o)
+            spectra_olci = np.array([-999.0] * num_o)
 
         grid.loc[index, 'Valid'] = valid
-        if valid==1:
+        if valid == 1:
             grid.loc[index, col_names_multi] = spectra_multi
             grid.loc[index, col_names_olci] = spectra_olci
 
     grid_valid = grid[grid['Valid'] == 1]
     grid_valid.to_csv(file_out, sep=';')
+
 
 def copy_files():
     # copy files with the dates indicated in the text file inputpath in output path
