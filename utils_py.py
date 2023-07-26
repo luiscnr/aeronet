@@ -578,7 +578,7 @@ def do_comparison_multi_olci():
     while date_here <= end_date:
 
         if region=='arc':
-           if date_here.month==12 or date_here.month<=2:
+           if date_here.month>=11 or date_here.month<=2:
                date_here = date_here + timedelta(hours=240)
                continue
         for param, dir_out in zip(params, dir_outs):
