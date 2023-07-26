@@ -507,6 +507,9 @@ def do_comparison_multi_olci():
     from datetime import datetime as dt
     dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
     dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    if region=='arc':
+        dir_olci_orig = '/store/COP2-OC-TAC/arc/integrated'
+        dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
     # dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
     # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
