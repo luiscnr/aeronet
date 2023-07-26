@@ -378,10 +378,33 @@ def do_comparison_multi_olci():
 
     if do_prepare_plot:
         from datetime import datetime as dt
+        for name in os.listdir(dir_out_base):
+            if not name.endswith('.csv'):
+                continue
+            fname = os.path.join(dir_out_base, name)
+            print('------------------------>', fname)
+            df = pd.read_csv(fname, sep=';')
+            fout = os.path.join(dir_out_base, f'{name[:-4]}_valid.csv')
+            f1 = open(fout, 'w')
+            f1.write('Date;Index;MultiVal;OlciVal')
+            for index, row in df.iterrows():
+                date_here = row['Date']
+                index_here = str(row['Index'])
+                valMulti = row['MultiVal']
+                valOlci = row['OlciVal']
+                if np.isnan(valMulti):
+                    continue
+                if np.isnan(valOlci):
+                    continue
+                f1.write('\n')
+                line = f'{date_here};{index_here};{valMulti};{valOlci}'
+                f1.write(line)
+            f1.close()
+
         indices = {}
         nfiles = 0
         for name in os.listdir(dir_out_base):
-            if not name.endswith('.csv'):
+            if not name.endswith('_valid.csv'):
                 continue
             nfiles = nfiles + 1
             fname = os.path.join(dir_out_base, name)
@@ -402,15 +425,10 @@ def do_comparison_multi_olci():
                 else:
                     indices[di] = 1
             print('------------------------')
-        # indices_rep = []
-        # for di in indices:
-        #     if indices[di] == nfiles:
-        #         indices_rep.append(di)
-        # print(len(indices_rep))
-        # print('------------------------')
+
 
         for name in os.listdir(dir_out_base):
-            if not name.endswith('.csv'):
+            if not name.endswith('_valid.csv'):
                 continue
             fname = os.path.join(dir_out_base, name)
             fout = os.path.join(dir_out_base, f'{name[:-4]}_common.csv')
@@ -487,10 +505,10 @@ def do_comparison_multi_olci():
     ##comparison
     print('[INFO] STARTED  COMPARISON...')
     from datetime import datetime as dt
-    # dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
-    # dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
-    dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
-    dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
+    dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+    dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
+    # dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
+    # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
         if args.region == 'arc':
