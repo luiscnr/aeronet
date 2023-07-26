@@ -169,11 +169,30 @@ def main():
     if args.mode == 'comparison_multi_olci':
         do_comparison_multi_olci()
 
+def do_test():
+    print('TEST')
+    from datetime import datetime as dt
+    from datetime import timedelta
+    start_date = dt(2016,5,1)
+    end_date = dt(2022,12,31)
+    date_here = start_date
+
+    yearref = 2016
+    while date_here <= end_date:
+        if date_here.year!=yearref:
+            print(date_here)
+            yearref = date_here.year
+        date_here = date_here + timedelta(hours=240)
+
 
 def do_comparison_multi_olci():
     import pandas as pd
     from netCDF4 import Dataset
     import numpy as np
+
+    if args.input == 'TEST':
+        do_test()
+        return
 
     region = 'med'
     if args.region:
@@ -558,6 +577,10 @@ def do_comparison_multi_olci():
 
     while date_here <= end_date:
 
+        if region=='arc':
+           if date_here.month==12 or date_here.month<=2:
+               date_here = date_here + timedelta(hours=240)
+               continue
         for param, dir_out in zip(params, dir_outs):
             # PARAMS, TO DEFINE FILE NAMES
             param_multi = param
