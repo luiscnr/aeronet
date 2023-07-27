@@ -302,7 +302,7 @@ def do_comparison_multi_olci():
 
         param = args.input.split('%')[1]
         param_name = param
-        if param.startswith('RRS'):
+        if param.startswith('RRS') and region!='arc':
             param_name = 'RRS'
         dir_comparison = os.path.join(dir_out_base, f'COMPARISON_{param_name}')
 
@@ -332,7 +332,7 @@ def do_comparison_multi_olci():
                 jday = date_here.strftime('%j')
                 file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
                 date_here_str = date_here.strftime('%Y-%m-%d')
-                # print(date_here_str)
+                print(file_c)
                 if os.path.exists(file_c):
                     nfiles = nfiles + 1
                     points_here = pd.read_csv(file_c, sep=';')
@@ -529,6 +529,10 @@ def do_comparison_multi_olci():
     if region=='arc':
         dir_olci_orig = '/store/COP2-OC-TAC/arc/integrated'
         dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
+    if region=='arcn':
+        dir_olci_orig = '/store/COP2-OC-TAC/arc/daily'
+        dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
+        region = 'arc'
     # dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
     # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
@@ -788,7 +792,7 @@ def do_comparison_bal_multi_olci():
     # file_olci = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/OLCI/O2016117-chl-bal-fr.nc'
     # file_multi = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI/MULTI/C2016117-chl-bal-hr.nc'
     # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI//Comparison_chla_2016117.csv'
-    # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
+    # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL',False)
 
     ##comparison chla
     # print('[INFO] STARTED HARDCORED COMPARISON...')
@@ -819,7 +823,7 @@ def do_comparison_bal_multi_olci():
     #         if os.path.exists(file_multi) and os.path.exists(file_olci):
     #             print(f'[INFO] Making date: {date_here}')
     #             file_out = os.path.join(dir_out,f'Comparison_RRS670_{year}{jday}.csv')
-    #             make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS665','RRS665')
+    #             make_comparison_impl(file_grid,file_multi,file_olci,file_out,'RRS665','RRS665',False)
     #     date_here = date_here + timedelta(hours=240)
 
     # getting global points
@@ -936,7 +940,7 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         val_olci = -999
         if len(array_here_good) == nvalid:
             val_olci = np.mean(array_here[array_here != -999])
-            val_olci = val_olci/np.pi
+            #val_olci = val_olci/np.pi
         if val_olci != -999 and val_multi != -999:
             valid = 1
         grid.loc[index, 'MultiVal'] = val_multi
