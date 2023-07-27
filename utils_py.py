@@ -537,7 +537,7 @@ def do_comparison_multi_olci():
     # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     if args.input == 'ALL':
-        if args.region == 'arc':
+        if args.region == 'arc' or args.region == 'arcn':
             params = ['RRS443', 'RRS490', 'RRS510', 'RRS560', 'RRS665']
         else:
             params = ['CHL', 'KD490']
