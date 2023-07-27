@@ -173,17 +173,49 @@ def do_test():
     print('TEST')
     from datetime import datetime as dt
     from datetime import timedelta
+    import pandas as pd
     start_date = dt(2016,5,1)
     end_date = dt(2022,12,31)
     date_here = start_date
 
-    yearref = 2016
+    dir_base1 = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/'
+    dir_base2 = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/PREV_COMPARISON'
+
+    dir_base1 = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/PREV_COMPARISON'
+    dir_base2 = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI'
+
+    bands = ['RS443','RRS490','RRS510','RRS560','RRS665']
+    file_out = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/CheckComparison.csv'
+    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/CheckComparison.csv'
+    f1 = open(file_out,'w')
+    f1.write('Date;RRS443;RRS490;RRS510;RRS560;RRS665')
+
+
     while date_here <= end_date:
-        if date_here.year!=yearref:
-            print(date_here)
-            yearref = date_here.year
+        date_here_str = date_here.strftime('%Y-%m-%d')
+        date_yj = date_here.strftime('%Y%j')
+        line = f'{date_here_str}'
+        nfiles = 0
+        for band in bands:
+            print('----------->',date_here_str,band,)
+            file1 = os.path.join(dir_base1,f'COMPARISON_{band}',f'Comparison_{band}_{date_yj}.csv')
+            file2 = os.path.join(dir_base2,f'COMPARISON_{band}', f'Comparison_{band}_{date_yj}.csv')
+            print(file1,file2)
+            if os.path.exists(file1) and os.path.exists(file2):
+                df1 = pd.read_csv(file1,sep=';')
+                df2 = pd.read_csv(file2,sep=';')
+                arraym1 = np.array(df1['OlciVal'])
+                arraym2 = np.array(df2['OlciVal'])
+                rm = np.mean(arraym1/arraym2)
+                line = f'{line};{rm}'
+                nfiles = nfiles + 1
+        if nfiles==len(bands):
+            f1.write('\n')
+            f1.write(line)
+
         date_here = date_here + timedelta(hours=240)
 
+    f1.close()
 
 def do_comparison_multi_olci():
     import pandas as pd
@@ -596,16 +628,26 @@ def do_comparison_multi_olci():
             if region == 'arc':
                 if param_multi == 'CHL':
                     param_olci = 'PLANKTON'
+                if param_multi == 'KD490':
+                    param_olci = 'TRANSP'
 
             var_multi = param_multi
             var_olci = param_olci
             if param_olci == 'PLANKTON':
                 var_olci = 'CHL'
+            if param_olci == 'TRANSP':
+                var_olci = 'KD490'
+
+
+
 
             year = date_here.strftime('%Y')
             jday = date_here.strftime('%j')
             dir_olci = os.path.join(dir_olci_orig, year, jday)
             dir_multi = os.path.join(dir_multi_orig, year, jday)
+
+
+
 
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
                 if param_multi == 'RRS':  ##different RRS applying band shif from OLCI to MULTI
@@ -646,6 +688,12 @@ def do_comparison_multi_olci():
                         print(f'[INFO] Making date: {date_here}')
                         file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
                         make_comparison_impl(file_grid, file_multi, file_olci, file_out, var_multi, var_olci)
+
+                    if not os.path.exists(file_multi) and os.path.exists(file_olci):
+                        print(f'[INFO] Making date: {date_here}')
+                        file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
+                        make_comparison_impl(file_grid, None, file_olci, file_out, None, var_olci)
+
         date_here = date_here + timedelta(hours=240)
 
     # getting global points
@@ -924,9 +972,10 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
     nvalid = window_size * window_size
 
     grid = pd.read_csv(file_grid, sep=';')
-    dataset_multi = Dataset(file_multi)
+    if file_multi is not None:
+        dataset_multi = Dataset(file_multi)
+        array_multi = np.array(dataset_multi.variables[variable_multi])
     dataset_olci = Dataset(file_olci)
-    array_multi = np.array(dataset_multi.variables[variable_multi])
     array_olci = np.array(dataset_olci.variables[variable_olci])
     for index, row in grid.iterrows():
         ymulti = int(row['YMulti'])
@@ -934,21 +983,28 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         yolci = int(row['YOlci'])
         xolci = int(row['XOlci'])
         valid = 0
-        val_multi = array_multi[0, ymulti, xmulti]
+        if file_multi is None:
+            val_multi = -999
+        else:
+            val_multi = array_multi[0, ymulti, xmulti]
         array_here = array_olci[0, yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
         array_here_good = array_here[array_here != -999]
         val_olci = -999
         if len(array_here_good) == nvalid:
             val_olci = np.mean(array_here[array_here != -999])
             #val_olci = val_olci/np.pi
+
         if val_olci != -999 and val_multi != -999:
+            valid = 1
+        if val_olci != -999 and file_multi is None:
             valid = 1
         grid.loc[index, 'MultiVal'] = val_multi
         grid.loc[index, 'OlciVal'] = val_olci
         grid.loc[index, 'Valid'] = valid
 
     dataset_olci.close()
-    dataset_multi.close()
+    if file_multi is not None:
+        dataset_multi.close()
     grid_valid = grid[grid['Valid'] == 1]
     grid_valid.to_csv(file_out, sep=';')
 
