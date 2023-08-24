@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
                              'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
-                             'comparison_multi_olci'])
+                             'comparison_multi_olci','extract_csv'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-fr', "--file_ref", help="File ref")
@@ -169,53 +169,206 @@ def main():
     if args.mode == 'comparison_multi_olci':
         do_comparison_multi_olci()
 
+    if args.mode == 'extract_csv':
+        do_extract_csv()
+
 def do_test():
     print('TEST')
-    from datetime import datetime as dt
-    from datetime import timedelta
     import pandas as pd
-    start_date = dt(2016,5,1)
-    end_date = dt(2022,12,31)
-    date_here = start_date
+    from datetime import datetime as dt
+    # print('Step 1')
+    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/GridArc.csv'
+    # lon_indices = {}
+    # df = pd.read_csv(file_grid,sep=';')
+    # for idx,row in df.iterrows():
+    #     index = str(int(row['Index']))
+    #     longitude = row['Longitude']
+    #     lon_indices[index] = longitude
+    #
+    #
+    # print('Step 2')
+    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/ALGORITHMS/rrs_points.csv'
+    # file_output = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/ALGORITHMS/jlon.csv'
+    # f1 = open(file_output,'w')
+    # f1.write('JDay;Longitude')
+    # dfi = pd.read_csv(file_input,sep=';')
+    # for idx,row in dfi.iterrows():
+    #     index = str(int(row['Index']))
+    #     date_str = str(row['Date'])
+    #     date_here = dt.strptime(date_str,'%Y-%m-%d')
+    #     lonvalue = lon_indices[index]
+    #     jvalue = date_here.strftime('%j')
+    #     line = f'{jvalue};{lonvalue}'
+    #     f1.write('\n')
+    #     f1.write(line)
+    # f1.close()
 
-    dir_base1 = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/'
-    dir_base2 = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/PREV_COMPARISON'
+    # file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/ALGORITHMS/rrs_points.csv'
+    # file_output = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/ALGORITHMS/chla_multi.csv'
 
-    dir_base1 = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/PREV_COMPARISON'
-    dir_base2 = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI'
+    # from datetime import datetime as dt
+    # from datetime import timedelta
+    # import pandas as pd
+    # start_date = dt(2016,5,1)
+    # end_date = dt(2022,12,31)
+    # date_here = start_date
+    #
+    # dir_base1 = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/'
+    # dir_base2 = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/PREV_COMPARISON'
+    #
+    # dir_base1 = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/PREV_COMPARISON'
+    # dir_base2 = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI'
+    #
+    # bands = ['RS443','RRS490','RRS510','RRS560','RRS665']
+    # file_out = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/CheckComparison.csv'
+    # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/CheckComparison.csv'
+    # f1 = open(file_out,'w')
+    # f1.write('Date;RRS443;RRS490;RRS510;RRS560;RRS665')
+    #
+    #
+    # while date_here <= end_date:
+    #     date_here_str = date_here.strftime('%Y-%m-%d')
+    #     date_yj = date_here.strftime('%Y%j')
+    #     line = f'{date_here_str}'
+    #     nfiles = 0
+    #     for band in bands:
+    #         print('----------->',date_here_str,band,)
+    #         file1 = os.path.join(dir_base1,f'COMPARISON_{band}',f'Comparison_{band}_{date_yj}.csv')
+    #         file2 = os.path.join(dir_base2,f'COMPARISON_{band}', f'Comparison_{band}_{date_yj}.csv')
+    #         print(file1,file2)
+    #         if os.path.exists(file1) and os.path.exists(file2):
+    #             df1 = pd.read_csv(file1,sep=';')
+    #             df2 = pd.read_csv(file2,sep=';')
+    #             arraym1 = np.array(df1['OlciVal'])
+    #             arraym2 = np.array(df2['OlciVal'])
+    #             rm = np.mean(arraym1/arraym2)
+    #             line = f'{line};{rm}'
+    #             nfiles = nfiles + 1
+    #     if nfiles==len(bands):
+    #         f1.write('\n')
+    #         f1.write(line)
+    #
+    #     date_here = date_here + timedelta(hours=240)
+    #
+    # f1.close()
 
-    bands = ['RS443','RRS490','RRS510','RRS560','RRS665']
-    file_out = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/CheckComparison.csv'
-    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/CheckComparison.csv'
-    f1 = open(file_out,'w')
-    f1.write('Date;RRS443;RRS490;RRS510;RRS560;RRS665')
-
-
-    while date_here <= end_date:
-        date_here_str = date_here.strftime('%Y-%m-%d')
-        date_yj = date_here.strftime('%Y%j')
-        line = f'{date_here_str}'
-        nfiles = 0
-        for band in bands:
-            print('----------->',date_here_str,band,)
-            file1 = os.path.join(dir_base1,f'COMPARISON_{band}',f'Comparison_{band}_{date_yj}.csv')
-            file2 = os.path.join(dir_base2,f'COMPARISON_{band}', f'Comparison_{band}_{date_yj}.csv')
-            print(file1,file2)
-            if os.path.exists(file1) and os.path.exists(file2):
-                df1 = pd.read_csv(file1,sep=';')
-                df2 = pd.read_csv(file2,sep=';')
-                arraym1 = np.array(df1['OlciVal'])
-                arraym2 = np.array(df2['OlciVal'])
-                rm = np.mean(arraym1/arraym2)
-                line = f'{line};{rm}'
-                nfiles = nfiles + 1
-        if nfiles==len(bands):
-            f1.write('\n')
-            f1.write(line)
-
-        date_here = date_here + timedelta(hours=240)
-
+    import pandas as pd
+    file_input = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/ALGORITHMS/rrs_points_kd.csv'
+    file_output = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/ALGORITHMS/kd_olci.csv'
+    file_ref = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/kd490_points.csv'
+    print('Getting values ref...')
+    values_ref = {}
+    dref = pd.read_csv(file_ref,sep=';')
+    for idx,row in dref.iterrows():
+        datestr = str(row['Date'])
+        index = str(int(row['Index']))
+        dindex= f'{datestr}{index}'
+        kdval = row['OlciVal']
+        values_ref[dindex] = kdval
+    print('Creating file out')
+    f1 = open(file_output,'w')
+    f1.write('kd_olci')
+    df = pd.read_csv(file_input,sep=';')
+    for idx,row in df.iterrows():
+        datestr = str(row['Date'])
+        index = str(int(row['Index']))
+        dindex = f'{datestr}{index}'
+        if dindex in values_ref:
+            value = values_ref[dindex]
+        else:
+            value = -999.0
+        line = f'{value}'
+        f1.write('\n')
+        f1.write(line)
     f1.close()
+
+def do_extract_csv():
+    import pandas as pd
+
+    from netCDF4 import Dataset
+    #file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation.csv'
+    file_csv = '/store/COP2-OC-TAC/arc/multi/validation/data_for_RRS_validation.csv'
+    #file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MULTI/GRID_FILES/ArcGrid_65_90_4KM_GridBase.nc'
+    file_grid = '/store/COP2-OC-TAC/arc/multi/validation/ArcGrid_65_90_4KM_GridBase.nc'
+    dir_dataset = '/store/COP2-OC-TAC/arc/multi/'
+    #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation_match_ups.csv'
+    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_RRS_validation_match_ups.csv'
+
+    dgrid = Dataset(file_grid)
+    lat_array = np.array(dgrid.variables['lat'])
+    lon_array = np.array(dgrid.variables['lon'])
+    dgrid.close()
+
+
+    lines_out = ['RRS412;RRS443;RRS490;RRS510;RRS560;RRS665;CHLA']
+    df = pd.read_csv(file_csv,';')
+    for index,row in df.iterrows():
+        line_out = None
+        datestr = str(int(row['Date']))
+        date_here = dt.strptime(datestr,'%Y%m%d')
+        year_str = date_here.strftime('%Y')
+        jday_str = date_here.strftime('%j')
+        dir_dataset_day = os.path.join(dir_dataset,year_str,jday_str)
+        lat_P = float(row['lat'])
+        lon_P = float(row['lon'])
+        dist_squared = (lat_array - lat_P) ** 2 + (lon_array - lon_P) ** 2
+        r, c = np.unravel_index(np.argmin(dist_squared),lon_array.shape)
+        name_rrs = f'C{year_str}{jday_str}_rrs-arc-4km.nc'
+        file_rrs = os.path.join(dir_dataset_day,name_rrs)
+        name_chla = f'C{year_str}{jday_str}_chl-arc-4km.nc'
+        file_chla = os.path.join(dir_dataset_day, name_chla)
+
+        print(f'[INFO] Index: {index} ------------------------')
+        print(f'[INFO] Date: {date_here} {year_str}-{jday_str}')
+        print(f'[INFO] Latitude: {lat_P} Longitude: {lon_P}')
+        print(f'[INFO] Row: {r} Column: {c}')
+
+        if os.path.exists(file_rrs):
+            print(f'[INFO] File rrs: {file_rrs}')
+            drrs = Dataset(file_rrs)
+            variables = ['RRS412','RRS443','RRS490','RRS510','RRS560','RRS665']
+            for variable in variables:
+                array_here = np.array(drrs.variables[variable])
+                val_here = array_here[r,c]
+                if line_out is None:
+                    line_out = f'{val_here}'
+                else:
+                    line_out = f'{line_out};{val_here}'
+            drrs.close()
+        else:
+            print(f'[WARNING] File rrs {file_rrs} does not exist')
+            line_out = 'NaN;NaN;NaN;NaN;NaN;NaN'
+
+        if os.path.exists(file_chla):
+            print(f'[INFO] File chl-a: {file_chla}')
+            dchl = Dataset(file_chla)
+            array_here = np.array(dchl.variables['CHL'])
+            val_here = array_here[r, c]
+            line_out = f'{line_out};{val_here}'
+            dchl.close()
+        else:
+            print(f'[WARNING] File chl-a {file_chla} does not exist')
+            line_out = f'{line_out};NaN'
+
+        lines_out.append(line_out)
+
+
+    print('[INFO] Writting...')
+    fr = open(file_csv,'r')
+    fw = open(fout,'w')
+    index = 0
+    for line in fr:
+        line_out = lines_out[index]
+        line_out = f'{line.strip()};{line_out}'
+        print(line_out)
+        fw.write(line_out)
+        fw.write('\n')
+        index = index + 1
+    fr.close()
+    fw.close()
+
+    print(f'[INFO] Completed')
+
 
 def do_comparison_multi_olci():
     import pandas as pd
@@ -372,7 +525,9 @@ def do_comparison_multi_olci():
                         multi_val = row[colMulti]
                         olci_val = row[colOlci]
                         index_here = row['Index']
-                        if (param == 'CHL' or param == 'KD490') and (multi_val < 0 or olci_val < 0):
+                        # if (param == 'CHL' or param == 'KD490') and (multi_val < 0 or olci_val < 0):
+                        #     continue
+                        if (param == 'CHL' or param == 'KD490') and (olci_val <= 0):
                             continue
                         line = f'{date_here_str};{index_here};{multi_val};{olci_val}'
                         f1.write('\n')
