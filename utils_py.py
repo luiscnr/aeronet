@@ -287,12 +287,12 @@ def do_extract_csv():
 
     from netCDF4 import Dataset
     #file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation.csv'
-    file_csv = '/store/COP2-OC-TAC/arc/multi/validation/data_for_RRS_validation.csv'
+    file_csv = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_validation.csv'
     #file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MULTI/GRID_FILES/ArcGrid_65_90_4KM_GridBase.nc'
     file_grid = '/store/COP2-OC-TAC/arc/multi/validation/ArcGrid_65_90_4KM_GridBase.nc'
     dir_dataset = '/store/COP2-OC-TAC/arc/multi/'
     #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation_match_ups.csv'
-    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_RRS_validation_match_ups.csv'
+    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_validation_match_ups.csv'
 
     dgrid = Dataset(file_grid)
     lat_array = np.array(dgrid.variables['lat'])
