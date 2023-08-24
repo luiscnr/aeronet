@@ -329,8 +329,8 @@ def do_extract_csv():
             variables = ['RRS412','RRS443','RRS490','RRS510','RRS560','RRS665']
             for variable in variables:
                 array_here = np.array(drrs.variables[variable])
-                print(r,c,array_here.shape)
-                val_here = array_here[r,c]
+
+                val_here = array_here[0,r,c]
                 if line_out is None:
                     line_out = f'{val_here}'
                 else:
@@ -344,7 +344,7 @@ def do_extract_csv():
             print(f'[INFO] File chl-a: {file_chla}')
             dchl = Dataset(file_chla)
             array_here = np.array(dchl.variables['CHL'])
-            val_here = array_here[r, c]
+            val_here = array_here[0,r, c]
             line_out = f'{line_out};{val_here}'
             dchl.close()
         else:
