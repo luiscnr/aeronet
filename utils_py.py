@@ -292,7 +292,7 @@ def do_extract_csv():
     file_grid = '/store/COP2-OC-TAC/arc/multi/validation/ArcGrid_65_90_4KM_GridBase.nc'
     dir_dataset = '/store/COP2-OC-TAC/arc/multi/'
     #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation_match_ups.csv'
-    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_validation_match_ups.csv'
+    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_validation_3x3_match_ups.csv'
 
     dgrid = Dataset(file_grid)
     lat_array = np.array(dgrid.variables['lat'])
@@ -330,7 +330,16 @@ def do_extract_csv():
             for variable in variables:
                 array_here = np.array(drrs.variables[variable])
 
-                val_here = array_here[0,r,c]
+                val_test = array_here[0,r,c]
+
+                if val_test!=-999:
+                    array_w = array_here[0,r-1:r+2,c-1:c+2]
+                    print(array_w.shape)
+                    array_c = array_w[array_w!=-999]
+                    val_here = np.mean(array_c[:])
+                else:
+                    val_here = -999
+
                 if line_out is None:
                     line_out = f'{val_here}'
                 else:
