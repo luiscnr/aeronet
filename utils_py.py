@@ -329,6 +329,7 @@ def do_extract_csv():
             variables = ['RRS412','RRS443','RRS490','RRS510','RRS560','RRS665']
             for variable in variables:
                 array_here = np.array(drrs.variables[variable])
+                print(r,c,array_here.shape)
                 val_here = array_here[r,c]
                 if line_out is None:
                     line_out = f'{val_here}'
