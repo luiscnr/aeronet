@@ -287,12 +287,12 @@ def do_extract_csv():
 
     from netCDF4 import Dataset
     #file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation.csv'
-    file_csv = '/store/COP2-OC-TAC/arc/multi/validation/data_for_RRS_validation.csv'
+    file_csv = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_training.csv'
     #file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MULTI/GRID_FILES/ArcGrid_65_90_4KM_GridBase.nc'
     file_grid = '/store/COP2-OC-TAC/arc/multi/validation/ArcGrid_65_90_4KM_GridBase.nc'
     dir_dataset = '/store/COP2-OC-TAC/arc/multi/'
     #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation_match_ups.csv'
-    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_RRS_validation_3x3_match_ups.csv'
+    fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_training_3x3_match_ups.csv'
 
     dgrid = Dataset(file_grid)
     lat_array = np.array(dgrid.variables['lat'])
@@ -300,7 +300,7 @@ def do_extract_csv():
     dgrid.close()
 
 
-    lines_out = ['RRS412;RRS443;RRS490;RRS510;RRS560;RRS665;CHLA']
+    lines_out = ['CCIV6_RRS412;CCIV6_RRS443;CCIV6_RRS490;CCIV6_RRS510;CCIV6_RRS560;CCIV6_RRS665;CCIV6_CHLA']
     df = pd.read_csv(file_csv,';')
     for index,row in df.iterrows():
         line_out = None
