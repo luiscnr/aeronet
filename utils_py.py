@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
                              'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
-                             'comparison_multi_olci','extract_csv'])
+                             'comparison_multi_olci','extract_csv','checksensormask'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-fr', "--file_ref", help="File ref")
@@ -171,6 +171,44 @@ def main():
 
     if args.mode == 'extract_csv':
         do_extract_csv()
+
+    if args.mode == 'checksensormask':
+        do_check_sensor_mask()
+
+def do_check_sensor_mask():
+    print('DO CHECK SENSOR MASK....')
+    from datetime import timedelta
+    from netCDF4 import Dataset
+    input_dir = '/store3/OC/MULTI/daily_v202311_x'
+    fout = '/store/COP2-OC-TAC/sensor_mask_check.csv'
+    #input_dir = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK'
+    #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/sensor_mask_check.csv'
+
+    start_date = dt(1997,9,16)
+    end_date = dt(2022,12,31)
+    date_here = start_date
+    comment_prev = 'N/A'
+    lines = []
+    while date_here<=end_date:
+        yearstr = date_here.strftime('%Y')
+        jjjstr = date_here.strftime('%j')
+        input_file = os.path.join(input_dir,yearstr,jjjstr,f'X{yearstr}{jjjstr}-chl-med-hr.nc')
+        if os.path.exists(input_file):
+            dataset = Dataset(input_file)
+            comment = dataset.variables['SENSORMASK'].comment.split('.')[0]
+            if comment!=comment_prev:
+                date_here_str = date_here.strftime('%Y-%m-%d')
+                line_here = f'{date_here_str};{comment}'
+                lines.append(line_here)
+                print(line_here)
+                comment_prev = comment
+        date_here = date_here + timedelta(hours=24)
+    f1 = open(fout,'w')
+    for line in lines:
+        f1.write(line)
+        f1.write('\n')
+    f1.close()
+
 
 def do_test():
     print('TEST')
