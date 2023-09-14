@@ -831,7 +831,7 @@ def do_comparison_multi_olci():
 
         if region=='arc':
            if date_here.month>=11 or date_here.month<=2:
-               date_here = date_here + timedelta(hours=240)
+               date_here = date_here + timedelta(hours=nhours)
                continue
         for param, dir_out in zip(params, dir_outs):
             # PARAMS, TO DEFINE FILE NAMES
@@ -855,15 +855,10 @@ def do_comparison_multi_olci():
                 var_olci = 'KD490'
 
 
-
-
             year = date_here.strftime('%Y')
             jday = date_here.strftime('%j')
             dir_olci = os.path.join(dir_olci_orig, year, jday)
             dir_multi = os.path.join(dir_multi_orig, year, jday)
-
-
-
 
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
                 if param_multi == 'RRS':  ##different RRS applying band shif from OLCI to MULTI
