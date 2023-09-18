@@ -864,9 +864,6 @@ def do_comparison_multi_olci():
             dir_olci = os.path.join(dir_olci_orig, year, jday)
             dir_multi = os.path.join(dir_multi_orig, year, jday)
 
-            print(dir_olci)
-            print(dir_multi)
-
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
                 if param_multi == 'RRS':  ##different RRS applying band shif from OLCI to MULTI
                     files_olci = []
@@ -901,8 +898,7 @@ def do_comparison_multi_olci():
                     else:
                         file_multi = os.path.join(dir_multi, f'X{year}{jday}-{param_multi.lower()}-{region}-hr.nc')
                         file_olci = os.path.join(dir_olci, f'O{year}{jday}-{param_olci.lower()}-{region}-fr.nc')
-                    print(file_multi)
-                    print(file_olci)
+
                     if os.path.exists(file_multi) and os.path.exists(file_olci):
                         print(f'[INFO] Making date: {date_here}')
                         file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
