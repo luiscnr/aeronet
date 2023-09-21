@@ -451,7 +451,6 @@ def do_comparison_daily_integrated():
     f1 = open(file_out,'w')
     f1.write('Date;Old-Integrated;New-Daily;Ratio')
 
-
     date_ref = date_ini
     while date_ref <= date_fin:
         if date_ref.month <= 2 or date_ref.month >= 11:
@@ -486,6 +485,7 @@ def do_comparison_daily_integrated():
         f1.write(line)
         date_ref = date_ref + timedelta(hours=24)
 
+    f1.close()
     print('DONE')
 
 
