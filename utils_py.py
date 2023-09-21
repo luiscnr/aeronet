@@ -167,7 +167,9 @@ def main():
         do_comparison_bal_multi_olci()
 
     if args.mode == 'comparison_multi_olci':
-        do_comparison_multi_olci()
+        #do_comparison_multi_olci()
+        #do_comparasion_multi_olci_byday()
+        do_comparison_daily_integrated()
 
     if args.mode == 'extract_csv':
         do_extract_csv()
@@ -428,6 +430,129 @@ def do_extract_csv():
 
     print(f'[INFO] Completed')
 
+
+def do_comparison_daily_integrated():
+    from netCDF4 import Dataset
+    import numpy as np
+    print('comparison daily-integrated')
+    # dirnew = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/daily'
+    # dirold = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/integrated'
+    # file_out_base = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/comparison_old_new_510'
+
+    dirnew = '/store/COP2-OC-TAC/arc/daily'
+    dirold = '/store/COP2-OC-TAC/arc/integrated'
+    file_out_base = '/store/COP2-OC-TAC/ARC_COMPARISON_MULTI_OLCI/comparison_old_new_510'
+
+    date_ini = dt.strptime(args.input, '%Y-%m-%d')
+    date_fin = dt.strptime(args.output, '%Y-%m-%d')
+    date_ini_str = date_ini.strftime('%Y%m%d')
+    date_fin_str = date_fin.strftime('%Y%m%d')
+    file_out = f'{file_out_base}_{date_ini_str}_{date_fin_str}.csv'
+    f1 = open(file_out,'w')
+    f1.write('Date;Old-Integrated;New-Daily;Ratio')
+
+
+    date_ref = date_ini
+    while date_ref <= date_fin:
+        if date_ref.month <= 2 or date_ref.month >= 11:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        date_str = date_ref.strftime('%Y%j')
+        print(date_str)
+        yyyy = date_ref.strftime('%Y')
+        jjj = date_ref.strftime('%j')
+        name_file = f'O{date_str}_rrs-arc-fr.nc'
+        file_old = os.path.join(dirold,yyyy,jjj,name_file)
+        file_new = os.path.join(dirnew,yyyy,jjj,name_file)
+        val_old = -999
+        val_new = -999
+        val_ratio = -999
+        if os.path.exists(file_old):
+            dold = Dataset(file_old)
+            array_old = np.array(dold.variables['RRS510'])
+            array_valid_old = array_old[array_old!=-999]
+            val_old = np.mean(array_valid_old)*1000
+            dold.close()
+        if os.path.exists(file_new):
+            dnew = Dataset(file_new)
+            array_new = np.array(dnew.variables['RRS510'])
+            array_valid_new = array_new[array_new!=-999]
+            val_new = np.mean(array_valid_new)*1000
+            dnew.close()
+        if val_old!=-999 and val_new!=-999:
+            val_ratio = val_old/val_new
+        line = f'{date_str};{val_old};{val_new};{val_ratio}'
+        f1.write('\n')
+        f1.write(line)
+        date_ref = date_ref + timedelta(hours=24)
+
+    print('DONE')
+
+
+def do_comparasion_multi_olci_byday():
+    import pandas as pd
+    from netCDF4 import Dataset
+    import numpy as np
+    var = 'CHL'
+    dir_comparison = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/COMPARISON_{var}'
+    fout = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/daily_check_{var}.csv'
+    f1= open(fout,'w')
+    f1.write('date;multival;olcival;ratio')
+    date_ini = dt(2016,5,1)
+    date_fin = dt(2023,5,31)
+    date_ref = date_ini
+    while date_ref<=date_fin:
+        if date_ref.month<=2 or date_ref.month>=11:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==6 and date_ref.day==24 and date_ref.year==2019:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==6 and date_ref.day==27 and date_ref.year==2019:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==7 and date_ref.day==26 and date_ref.year==2019:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==7 and date_ref.day==29 and date_ref.year==2019:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==3 and date_ref.day==1 and date_ref.year==2020:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==9 and date_ref.day==11 and date_ref.year==2021:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+
+        #chl
+        if date_ref.month==3 and date_ref.day==9 and date_ref.year==2020:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==7 and date_ref.day==13 and date_ref.year==2020:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+        if date_ref.month==4 and date_ref.day==26 and date_ref.year==2023:
+            date_ref = date_ref + timedelta(hours=24)
+            continue
+
+        date_str = date_ref.strftime('%Y%j')
+        print(date_str)
+        name_comparison = f'Comparison_{var}_{date_str}.csv'
+        file_comparison = os.path.join(dir_comparison,name_comparison)
+
+        df = pd.read_csv(file_comparison,sep=';')
+        val_multi = df['MultiVal'].to_numpy()
+        val_olci = df['OlciVal'].to_numpy()
+        ratio = np.log10(val_olci)/np.log10(val_multi)
+        avg_multi = np.log10(np.mean(val_multi))
+        avg_olci = np.log10(np.mean(val_olci))
+        avg_ratio = np.mean(ratio)
+        line = f'{date_str};{avg_multi};{avg_olci};{avg_ratio}'
+        f1.write('\n')
+        f1.write(line)
+
+        date_ref = date_ref + timedelta(hours=24)
+    f1.close()
 
 def do_comparison_multi_olci():
     import pandas as pd
