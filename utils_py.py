@@ -24,6 +24,7 @@ parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-fr', "--file_ref", help="File ref")
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
 parser.add_argument('-r', "--region", help="Region")
+parser.add_argument('-it',"--interval",help="Interval for comparison (in days)")
 parser.add_argument('-sd', "--start_date", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--end_date", help="The End Date - format YYYY-MM-DD ")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
@@ -898,6 +899,8 @@ def do_comparison_multi_olci():
     dir_olci_orig = '/dst04-data1/OC/OLCI/daily_3.01'
     dir_multi_orig = '/store3/OC/MULTI/daily_v202311_x'
     nhours = 240
+    if args.interval:
+        nhours = int(args.interval) * 24
     if region=='arc':
         dir_olci_orig = '/store/COP2-OC-TAC/arc/integrated'
         dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
@@ -905,7 +908,7 @@ def do_comparison_multi_olci():
         dir_olci_orig = '/store/COP2-OC-TAC/arc/daily'
         dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
         region = 'arc'
-        nhours = 24
+        #nhours = 24
     # dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
     # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
