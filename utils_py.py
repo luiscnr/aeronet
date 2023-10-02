@@ -167,9 +167,9 @@ def main():
         do_comparison_bal_multi_olci()
 
     if args.mode == 'comparison_multi_olci':
-        #do_comparison_multi_olci()
+        do_comparison_multi_olci()
         #do_comparasion_multi_olci_byday()
-        do_comparison_daily_integrated()
+        #do_comparison_daily_integrated()
 
     if args.mode == 'extract_csv':
         do_extract_csv()
