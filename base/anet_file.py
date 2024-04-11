@@ -15,8 +15,10 @@ class ANETFile:
             self.completedf = completedf
         self.VALID_FILE = self.check_timevar_names()
         self.THULIER_METHOD = AERONETConstants().ThuillierMethodDefault
-
-        print('CHECKING DATES...')
+        if file_path is not None:
+            print(f'[INFO] CHECKING DATES IN FILE: {file_path.split("/")[-1]}')
+        else:
+            print(f'[INFO] CHECKING DATES:')
         self.idate = self.completedf.columns.get_loc('Date(dd-mm-yyyy)')
         self.itime = self.completedf.columns.get_loc('Time(hh:mm:ss)')
         self.format_date = '%d-%m-%Y'
@@ -28,13 +30,15 @@ class ANETFile:
         self.abs_start_date = self.get_date(0)
         self.abs_end_date = self.get_date(-1)
         self.ntimes = len(self.completedf.index)
-        print('START DATE: ',self.abs_start_date, 'END DATE: ',self.abs_end_date)
+        print('[INFO] START DATE: ',self.abs_start_date, 'END DATE: ',self.abs_end_date)
 
         if check_variables:
-            print('CHECKING VARIABLES AND WAVELENGHTS...')
+            print('[INFO] CHECKING VARIABLES AND WAVELENGHTS...')
             self.ws_var_names, self.nominal_ws, self.nws, valid = self.extract_ws_var_names()
             if not valid:
                 self.VALID_FILE = False
+
+            print(f'[INFO] Nominal wavelenghts: {self.nominal_ws}')
 
             # print(self.nws)
             # print(self.nominal_ws)
@@ -74,7 +78,7 @@ class ANETFile:
             if not check_info_var:
                 self.VALID_FILE = False
 
-        print('DONE')
+        #print('DONE')
         # time_array = self.get_time_as_float_array()
 
     def extract_ws_var_names(self):

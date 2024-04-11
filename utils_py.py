@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
                              'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
-                             'comparison_multi_olci','extract_csv','checksensormask'])
+                             'comparison_multi_olci','extract_csv','checksensormask','match-ups_from_extracts','doors_certo_msi_csv'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-fr', "--file_ref", help="File ref")
@@ -179,6 +179,134 @@ def main():
         #do_check_sensor_mask()
         do_test()
 
+    if args.mode == 'match-ups_from_extracts':
+        do_match_ups_from_extracts()
+
+    if args.mode=='doors_certo_msi_csv':
+        do_doors_certo_msi_csv()
+
+def do_doors_certo_msi_csv():
+    name_in = 'DOOR_insitu_BlackSea_AeronetOC_Galata_Platform_extract_CERTO_MSI_aeronetbulgaria.csv'
+    name_out = 'DOOR_insitu_BlackSea_AeronetOC_Galata_Platform_extract_CERTO_MSI.csv'
+
+    input_path = f'/mnt/c/DATA_LUIS/DOORS_WORK/in_situ_extracts/certo_msi/{name_in}'
+    output_path = f'/mnt/c/DATA_LUIS/DOORS_WORK/in_situ_extracts/certo_msi/{name_out}'
+    input_dir = os.path.dirname(input_path)
+    shutil.copy(input_path,output_path)
+    import pandas as pd
+    df = pd.read_csv(output_path,sep=';')
+    used = [0] * len(df.index)
+    assigned = [0] * len(df.index)
+    nmax = 0
+    for name in os.listdir(input_dir):
+        file_csv = os.path.join(input_dir,name)
+        if file_csv==input_path or file_csv==output_path:
+            continue
+        if os.path.isdir(file_csv):
+            continue
+        df_here = pd.read_csv(file_csv,sep=';')
+        for index,row in df_here.iterrows():
+            if used[index]==0 and df.loc[index,'Index']>=0:
+                print('Used index is: ',index)
+                used[index]=1
+                assigned[index]=1
+
+
+            if row['Index']>=0:
+                used[index] = used[index]+1
+                print('Nex index:', index, ' per file: ', name, '--->', used[index])
+                if used[index]>nmax:
+                    nmax = used[index]
+
+    for ival in range(1,nmax):
+        df[f'Extract_{ival}'] = 'NaN'
+        df[f'Index_{ival}'] = -1
+    print('Nmax: ',nmax)
+
+    for name in os.listdir(input_dir):
+        file_csv = os.path.join(input_dir,name)
+        if file_csv==input_path or file_csv==output_path:
+            continue
+        if os.path.isdir(file_csv):
+            continue
+        print(name)
+        df_here = pd.read_csv(file_csv,sep=';')
+        for index,row in df_here.iterrows():
+            if row['Index'] >= 0:
+                if assigned[index]==0:
+                    iname = 'Index'
+                    ename = 'Extract'
+                else:
+                    iname = f'Index_{assigned[index]}'
+                    ename = f'Extract_{assigned[index]}'
+                df.at[index,iname] = row['Index']
+                df.at[index,ename] = row['Extract']
+
+
+                assigned[index] = assigned[index]+1
+
+    df.loc[df['Index']==-1,'Extract'] = 'NaN'
+
+    df.to_csv(output_path,sep=';')
+
+def do_match_ups_from_extracts():
+    print('Math-ups from extracts')
+
+    file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPS-PFT/results_chla/Chl_per_group_sup_up_11m_chla_extracts.csv'
+
+    dir_extracts = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPS-PFT/extracts_multi_chla'
+    file_out = f'{file_csv[:-4]}_3x3.csv'
+    # rc_ini = 12
+    # rc_fin = 12
+    rc_ini = 11
+    rc_fin = 13
+    from netCDF4 import Dataset
+    df = pd.read_csv(file_csv,';')
+    #col_names = df.columns.tolist() + ['RRS_412','RRS_443','RRS_490','RRS_510','RRS_560','RRS_665']
+    col_names = df.columns.tolist() + ['Chla']
+    first_line = ';'.join(col_names)
+    fw = open(file_out,'w')
+    fw.write(first_line)
+    for index,row in df.iterrows():
+        lrow = [str(x).strip() for x in list(row)]
+        line = ';'.join(lrow)
+
+        ##rrs
+        #index_extract = row['Index_Extract_RRS']
+        # values = [-999] * 6
+        # if index_extract>=0:
+        #     name_extract = row['Extract_RRS']
+        #     extract_file = os.path.join(dir_extracts,f'extract_{name_extract}')
+        #     dataset = Dataset(extract_file)
+        #     for ivar in range(6):
+        #         rrs_data = np.array(dataset.variables['satellite_Rrs'][0, ivar, rc_ini:rc_fin+1,rc_ini:rc_fin+1])
+        #         rrs_data_c = rrs_data[rrs_data!=-999.0]
+        #         if len(rrs_data_c)>0:
+        #             values[ivar] = np.mean(rrs_data_c)
+        #         else:
+        #             values[ivar] = -999.0
+        #     dataset.close()
+        #chla
+        index_extract = row['Index_Extract_CHLA']
+        values = [-999.0]
+        if index_extract>=0:
+            name_extract = row['Extract_CHLA']
+            extract_file = os.path.join(dir_extracts,f'extract_{name_extract}')
+            dataset = Dataset(extract_file)
+            chl_data = np.array(dataset.variables['satellite_CHL'][0, rc_ini:rc_fin+1,rc_ini:rc_fin+1])
+            chl_data_c = chl_data[chl_data != -999.0]
+            if len(chl_data_c)>0:
+                values[0] = np.mean(chl_data_c)
+            else:
+                values[0] = -999.0
+            dataset.close()
+        for ivar in range(len(values)):
+            line = f'{line};{values[ivar]}'
+        fw.write('\n')
+        fw.write(line)
+        print(line)
+    fw.close()
+    return
 def do_check_sensor_mask():
     print('DO CHECK SENSOR MASK....')
     from datetime import timedelta
@@ -702,8 +830,9 @@ def do_comparison_multi_olci():
                 jday = date_here.strftime('%j')
                 file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
                 date_here_str = date_here.strftime('%Y-%m-%d')
-                print(file_c)
+
                 if os.path.exists(file_c):
+                    print(file_c)
                     nfiles = nfiles + 1
                     points_here = pd.read_csv(file_c, sep=';')
                     for index, row in points_here.iterrows():
@@ -717,7 +846,10 @@ def do_comparison_multi_olci():
                         line = f'{date_here_str};{index_here};{multi_val};{olci_val}'
                         f1.write('\n')
                         f1.write(line)
+
                 date_here = date_here + timedelta(hours=240)  # 10 days
+                # if date_here.year==2019 and date_here.month==10 and date_here.day==23:
+                #     date_here = date_here + timedelta(hours=24)
         else:
             df_ref = pd.read_csv(file_ref, sep=';')
             dates_ref = df_ref['Date']
@@ -874,10 +1006,9 @@ def do_comparison_multi_olci():
                 index_here = str(int(float(l[1].strip())))
                 ymulti_here = indices[index_here]['YMulti']
                 xmulti_here = indices[index_here]['XMulti']
-                if (ymulti_here % 10) == 0 and (xmulti_here % 10) == 0:
+                if (ymulti_here % 20) == 0 and (xmulti_here % 20) == 0:
                     f1.write('\n')
                     f1.write(line.strip())
-
             except:
                 pass
 

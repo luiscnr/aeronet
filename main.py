@@ -56,7 +56,7 @@ def only_test_four_prev():
         times.append(datehere.strftime('%Y%m%d%H%M'))
         print(times[idx])
 
-    #file_out = os.path.join(dir_base, 'MDB___CCI_INSITU_19970101_20221231_4P5hours.csv')
+    # file_out = os.path.join(dir_base, 'MDB___CCI_INSITU_19970101_20221231_4P5hours.csv')
     file_out = os.path.join(dir_base, 'MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv')
     fs = os.path.join(dir_base, 'longitudespolymer.csv')
     f1 = open(fs, 'w')
@@ -92,7 +92,7 @@ def only_test_four_prev():
 
 def only_test_six():
     import shutil
-    #file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/CHLA_COMMON_LATLON.csv'
+    # file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/CHLA_COMMON_LATLON.csv'
     file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv'
     dir_images = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/L1B'
     dir_copy = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/L1B_MATCH-UPS'
@@ -101,20 +101,20 @@ def only_test_six():
     for index, row in df.iterrows():
         granule_s3a = row['GRANULES_S3A']
         granule_s3b = row['GRANULES_S3B']
-        #print(granule_s3a,granule_s3b)
-        if granule_s3a!='NODATA':
-            file_s3a = os.path.join(dir_images,granule_s3a)
-            #print(file_s3a,os.path.exists(file_s3a))
+        # print(granule_s3a,granule_s3b)
+        if granule_s3a != 'NODATA':
+            file_s3a = os.path.join(dir_images, granule_s3a)
+            # print(file_s3a,os.path.exists(file_s3a))
             if not os.path.exists(file_s3a):
-                print('ATTENTIONS MISSING: ',file_s3a)
+                print('ATTENTIONS MISSING: ', file_s3a)
             else:
                 print(file_s3a)
-                fnew = os.path.join(dir_copy,granule_s3a)
+                fnew = os.path.join(dir_copy, granule_s3a)
                 if not os.path.exists(fnew):
-                    shutil.copytree(file_s3a,fnew)
-        if granule_s3b!='NODATA':
-            file_s3b = os.path.join(dir_images,granule_s3b)
-            #print(file_s3b,os.path.exists(file_s3b))
+                    shutil.copytree(file_s3a, fnew)
+        if granule_s3b != 'NODATA':
+            file_s3b = os.path.join(dir_images, granule_s3b)
+            # print(file_s3b,os.path.exists(file_s3b))
             if not os.path.exists(file_s3b):
                 print('ATTENTIONS MISSING: ', file_s3b)
             else:
@@ -123,8 +123,10 @@ def only_test_six():
                 if not os.path.exists(fnew):
                     shutil.copytree(file_s3b, fnew)
     return True
+
+
 def only_test_six_prev():
-    #file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/CHLA_COMMON_LATLON.csv'
+    # file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/CHLA_COMMON_LATLON.csv'
     file_lat_lon = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/MDB_S3AB_OLCI_POLYMER_INSITU_20160401_20220531_valid.csv'
     dir_images = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/CHLA/PUBLICATION/L1B'
     import pandas as pd
@@ -218,6 +220,58 @@ def only_test_five():
     return True
 
 
+def trajectory_figure():
+    print('TRAJECTORY FIGURE')
+    import matplotlib.pyplot as plt
+    from netCDF4 import Dataset
+    import cartopy.crs as ccrs
+    import cartopy
+    # extract_file = '/mnt/c/DATA_LUIS/TARA_TEST/extracts/S3A_OL_2_WFR____20230405T105805_20230405T110105_20230406T233602_0179_097_208_2160_MAR_O_NT_003_SEN3_extract_2_0.nc'
+    # dataset = Dataset(extract_file)
+    # lat = np.array(dataset.variables['satellite_latitude'])
+    # lon = np.array(dataset.variables['satellite_longitude'])
+    #
+    # dataset.close()
+
+    # file_img = '/mnt/c/DATA_LUIS/TARA_TEST/extracts/pixels.png'
+    # rgb = np.ma.zeros((25, 25, 3))
+    #
+    # rgb[:, :, 0] = 255
+    # rgb[:, :, 1] = 255
+    # rgb[:, :, 2] = 255
+    #
+    # extent = [0, 25, 0, 25]
+    # plt.imshow(rgb, interpolation=None, extent=extent)
+    # for y in range(25):
+    #     plt.hlines(y,0,25,colors=['black'])
+    # for x in range(25):
+    #     plt.vlines(x,0,25,colors=['black'])
+    # plt.hlines(12, 12, 13, colors=['r'])
+    # plt.hlines(13, 12, 13, colors=['r'])
+    # plt.vlines(12, 12, 13, colors=['r'])
+    # plt.vlines(13, 12, 13, colors=['r'])
+    # plt.savefig(file_img)
+    # plt.close()
+
+    file_points = '/mnt/c/DATA_LUIS/TARA_TEST/TaraEuropa_StationGPS_Map_October_11.csv'
+    fout = '/mnt/c/DATA_LUIS/TARA_TEST/trajectory.tif'
+    import pandas as pd
+    df = pd.read_csv(file_points, sep=';')
+
+    array = df.to_numpy()
+    lat_points = array[:, 2]
+    lon_points = array[:, 3]
+
+    ax = plt.axes(projection=ccrs.Miller())
+    ax.set_extent([-10, 30, 35, 65], crs=ccrs.PlateCarree())
+
+    hline = ax.plot(lon_points, lat_points, color='black', linewidth=1, marker='.', transform=ccrs.Geodetic())
+    plt.savefig(fout, dpi=300, bbox_inches='tight', pil_kwargs={"compression": "tiff_lzw"})
+    # lat_points = [43.9329, 43.9169]
+
+    return True
+
+
 def baltic_figure1():
     print('BALTIC FIGURE')
     dir_base = '/mnt/c/DATA_LUIS/octac_work/bal_evolution/EXAMPLES/TRIMMED/MDBs/PLOT_OTHER'
@@ -288,7 +342,8 @@ def baltic_figure1():
                 lon_date_plot = []
 
         if len(lat_date) > 1:
-            ax.plot(lon_date_plot, lat_date_plot, color='gray', linewidth=1, marker=None, transform=ccrs.Geodetic())
+            hline = ax.plot(lon_date_plot, lat_date_plot, color='gray', linewidth=1, marker=None,
+                            transform=ccrs.Geodetic())
 
     file_chla = os.path.join(dir_base, 'MDB___CCI_INSITU_19970101_20221231_4P5hours.csv')
     df = pd.read_csv(file_chla, sep=';')
@@ -299,6 +354,7 @@ def baltic_figure1():
     sources = [1, 2]
     symbols = ['x', '+']
     periods = ['MULTI', 'OLCI']
+    handles = []
     for period in periods:
         if period == 'MULTI':
             lat_p = lat_array[year < 2016]
@@ -316,13 +372,18 @@ def baltic_figure1():
             lat_plot = lat_p[source_p == s]
             lon_plot = lon_p[source_p == s]
             print(period, s, len(lat_plot))
-            ax.plot(lon_plot, lat_plot, color=color_p, linewidth=0, marker=symbol, markersize=4,
-                    transform=ccrs.Geodetic())
+            hp = ax.plot(lon_plot, lat_plot, color=color_p, linewidth=0, marker=symbol, markersize=4,
+                         transform=ccrs.Geodetic())
+            handles.append(hp[0])
 
     # stations
-    ax.plot([17.467], [58.594], color='green', marker='o', markersize=5, transform=ccrs.Geodetic())  # GDL
+    h = ax.plot([17.467], [58.594], color='green', marker='o', linewidth=0, markersize=5,
+                transform=ccrs.Geodetic())  # GDL
     ax.plot([24.926], [59.949], color='green', marker='o', markersize=5, transform=ccrs.Geodetic())  # HLH
     ax.plot([21.723], [57.751], color='green', marker='o', markersize=5, transform=ccrs.Geodetic())  # ILH
+
+    handles.append(h[0])
+    handles.append((hline[0]))
 
     gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
                       linewidth=0.5, color='black', alpha=0.6, linestyle=':')
@@ -333,18 +394,79 @@ def baltic_figure1():
     gl.xlabel_style = {'size': 10}
     gl.ylabel_style = {'size': 10}
 
-    fout = os.path.join(dir_base, 'Figure1.png')
+    fout = os.path.join(dir_base, 'Figure1.tif')
 
-    plt.savefig(fout, dpi=300, bbox_inches='tight')
+    print(len(handles))
+    print(handles)
+    str_legend = ['Alg@line 1997-2015', 'COMBINE 1997-2015', 'Alg@line 2016-2019', 'COMBINE 2016-2019',
+                  'AERONET-OC sites', 'Alg@line radiometry']
+    plt.legend(handles, str_legend, fontsize=8, loc='upper left', markerscale=1.0, bbox_to_anchor=(-0.01, 1.01),
+               framealpha=1.0)
+
+    plt.text(16.0, 58.7, 'GDT', transform=ccrs.Geodetic(), fontsize=8)
+    plt.text(24.5, 60.25, 'HL', transform=ccrs.Geodetic(), fontsize=8)
+    plt.text(21.7, 57.1, 'IL', transform=ccrs.Geodetic(), fontsize=8)
+
+    print(fout)
+    plt.savefig(fout, dpi=300, bbox_inches='tight', pil_kwargs={"compression": "tiff_lzw"})
 
     return True
 
 
+def only_test_seven():
+    file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_AAOT.LWN_lev20_15.nc'
+    import base.anet_nc_reader
+    reader = base.anet_nc_reader.AERONETReader(file_nc)
+    reader.extract_time_list()
+    for t in reader.time_list:
+        print(t)
+
+    return True
+
+def only_test_eight():
+    from base.anet_nc_reader import AERONETReader
+
+    #site = 'Galata_Platform'
+    #site = 'Gloria'
+    site = 'Section-7_Platform'
+
+    #system = 'Black Sea'
+    system = 'Danube Delta'
+
+    #file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Galata_Platform.LWN_lev20_15.nc'
+    #file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Gloria.LWN_lev20_15.nc'
+    file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Section-7_Platform.LWN_lev20_15.nc'
+
+    areader = AERONETReader(file_nc)
+    date_list = areader.get_available_dates('2016-01-01', None)
+
+    #file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Galata_Platform.csv'
+    #file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Gloria.csv'
+    file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Section-7_Platform.csv'
+
+    first_line = 'System;Station;Date;Time;Lat;Long;Source'
+
+    prename = f'{system};{site}'
+
+    #post_name = '12:00;43.044624;28.193190;AERONET-OC' ##Galata_Platform
+    #post_name = '12:00;44.599970;29.359670;AERONET-OC' ##Gloria
+    post_name = '12:00;44.5458;29.4466;AERONET-OC' ##Section-7
+    f1 = open(file_out,'w')
+    f1.write(first_line)
+    for d in date_list:
+        print(d)
+        line = f'{prename};{d};{post_name}'
+        f1.write('\n')
+        f1.write(line)
+    f1.close()
+    return True
+
 def main():
     # b = baltic_figure1()
-    b = only_test_six()
-    if b:
-        return
+    # b = trajectory_figure()
+    # b = only_test_eight()
+    # if b:
+    #     return
     # to run script loca:
     # python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
     print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
@@ -389,6 +511,10 @@ def main():
     if args.sites:
         if args.sites == 'BAL':
             sites = ['Gustav_Dalen_Tower', 'Irbe_Lighthouse', 'Helsinki_Lighthouse']
+        elif args.sites == 'BLK':
+            sites = ['Galata_Platform', 'Gloria', 'Section-7_Platform']
+        else:
+            sites = [args.sites]
 
     dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
     dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
@@ -407,9 +533,12 @@ def main():
         # if site == 'Gloria':
         if do_site:
             if args.verbose:
-                print('DOING SITE:', site, '-----------------------------------------')
+                print('[INFO] DOING SITE:', site, '-----------------------------------------')
             afilel20 = ANETFile(f20, None, False)
             afilel15 = ANETFile(f15, None, False)
+            if args.verbose:
+                print(f'[INFO] File 2.0: {f20}')
+                print(f'[INFO] File 1.5: {f15}')
             dfcombined = afilel20.check_and_append_df(afilel15)
             aeronet_combined = ANETFile(None, dfcombined, True)
             file_out = os.path.join(dir_output, f.replace('lev20', 'lev20_15') + '.nc')

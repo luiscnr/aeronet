@@ -103,8 +103,8 @@ class RESTO_WEB():
         rfile = RESTONCFile(fileout)
         rfile.start_file(self.ntimes, self.nws)
         rfile.add_nominalws_variable(self.nominal_wavelenghts)
-        rfile.add_time_variable(np.array(self.times, dtype=np.float))
-        rrsa = np.array(self.rrs, dtype=np.float)
+        rfile.add_time_variable(np.array(self.times, dtype=np.float32))
+        rrsa = np.array(self.rrs, dtype=np.float32)
         rfile.add_2D_variable('RRS',rrsa)
         rfile.add_global_atributtes(self.start_date,self.end_date,self.instrument)
         rfile.close_file()
@@ -119,7 +119,7 @@ class RESTO_WEB():
                 try:
                     wlmin = float(unitst[0])
                     wlmax = float(unitst[1])
-                    self.nominal_wavelenghts = np.arange(wlmin, wlmax + 1, dtype=np.float)
+                    self.nominal_wavelenghts = np.arange(wlmin, wlmax + 1, dtype=np.float32)
                 except:
                     pass
 

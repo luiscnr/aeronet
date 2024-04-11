@@ -60,6 +60,11 @@ class AERONETReader:
             self.data_wl = self.data_wl[:, self.valid_wl]
         return self.data_wl
 
+    def extract_single_data(self, var):
+        data = self.dataset[var][self.row_ini:self.row_fin + 1]
+
+        return data
+
     def extract_rrs(self, onlyvalid):
         Lwn_fQ = self.extract_spectral_data('Lwn_f_Q', onlyvalid)
         f0 = self.extract_spectral_data('F0', onlyvalid)
@@ -80,6 +85,13 @@ class AERONETReader:
                 self.date_fin = dthere
         return self.time_list
 
+    def extract_time_sublist(self,rini,rfin):
+        time_list_here = []
+        for r in range(rini, rfin + 1):
+            dthere = self.get_datetime(r)
+            time_list_here.append(dthere)
+        return time_list_here
+
     def out_spectral_data(self):
         nominal_wl = self.dataset['Nominal_Wavelenghts'][self.valid_wl]
         if self.time_list is None:
@@ -95,6 +107,9 @@ class AERONETReader:
             for j in range(nwl):
                 line = line + ';' + f'{self.data_wl[i][j]:.6f}'
             print(line)
+
+    def get_all_nominal_wl(self):
+        return self.dataset['Nominal_Wavelenghts'][:]
 
     def plot_spectra(self, hfig):
         print('Plot spectra...')

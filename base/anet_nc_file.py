@@ -21,7 +21,7 @@ class ANETNCFile:
             },
             'Lt_mean': {
                 'short_name': 'Lt mean',
-                'long_name': 'Solar Azimuth Angle',
+                'long_name': 'Lt mean',
                 'units': 'degrees'
             },
 
