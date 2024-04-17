@@ -281,13 +281,16 @@ def get_info_aqua(file):
     res['ntotal'] = smask.shape[0]
     res['nvalid'] = np.count_nonzero(smask)
     nobs = np.zeros(smask.shape)
+    nsensors = 0
     for val in flag_values:
         bitval = np.bitwise_and(smask, val)
         bitval[bitval > 0] = 1
+        if np.sum(bitval)>0:
+            nsensors = nsensors + 1
         if val == 2:  ##aqua:
             aqua_array = bitval
         nobs = nobs + bitval
-
+    res['nsensors'] = nsensors
     res['naqua'] = np.sum(aqua_array)
     aqua_combined = aqua_array + nobs
     aqua_combined[aqua_array == 0] = 0
