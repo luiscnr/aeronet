@@ -216,7 +216,7 @@ def do_aqua_check():
     else:
         end_date = start_date
 
-    if end_date > start_date:
+    if end_date < start_date:
         print(f'[ERROR] Start date {start_date} shoud be lower or equal to end date {end_date}')
         return
 
