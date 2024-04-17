@@ -18,13 +18,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
                              'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
-                             'comparison_multi_olci','extract_csv','checksensormask','match-ups_from_extracts','doors_certo_msi_csv'])
+                             'comparison_multi_olci', 'extract_csv', 'checksensormask', 'match-ups_from_extracts',
+                             'doors_certo_msi_csv', 'aqua_check'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-fr', "--file_ref", help="File ref")
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
 parser.add_argument('-r', "--region", help="Region")
-parser.add_argument('-it',"--interval",help="Interval for comparison (in days)")
+parser.add_argument('-it', "--interval", help="Interval for comparison (in days)")
 parser.add_argument('-sd', "--start_date", help="The Start Date - format YYYY-MM-DD ")
 parser.add_argument('-ed', "--end_date", help="The End Date - format YYYY-MM-DD ")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
@@ -169,21 +170,147 @@ def main():
 
     if args.mode == 'comparison_multi_olci':
         do_comparison_multi_olci()
-        #do_comparasion_multi_olci_byday()
-        #do_comparison_daily_integrated()
+        # do_comparasion_multi_olci_byday()
+        # do_comparison_daily_integrated()
 
     if args.mode == 'extract_csv':
         do_extract_csv()
 
     if args.mode == 'checksensormask':
-        #do_check_sensor_mask()
+        # do_check_sensor_mask()
         do_test()
 
     if args.mode == 'match-ups_from_extracts':
         do_match_ups_from_extracts()
 
-    if args.mode=='doors_certo_msi_csv':
+    if args.mode == 'doors_certo_msi_csv':
         do_doors_certo_msi_csv()
+
+    if args.mode == 'aqua_check':
+        do_aqua_check()
+
+
+def do_aqua_check():
+    if not args.input:
+        print(f'[ERROR] --input (-i) is required')
+        return
+    input_path = args.input
+    if not os.path.isdir(input_path):
+        print(f'[ERROR] {input_path} is not a valid directory')
+        return
+    if not args.start_date:
+        print(f'[ERROR] --start_date (-sd) is required')
+        return
+    try:
+        start_date = dt.strptime(args.start_date, '%Y-%m-%d')
+    except:
+        print(f'[ERROR] Start date: {args.start_date} is not in the valid format YYYY-mm-dd')
+        return
+
+    if args.end_date:
+        try:
+            end_date = dt.strptime(args.end_date, '%Y-%m-%d')
+        except:
+            print(f'[ERROR] Start date: {args.end_date} is not in the valid format YYYY-mm-dd')
+            return
+    else:
+        end_date = start_date
+
+    if end_date > start_date:
+        print(f'[ERROR] Start date {start_date} shoud be lower or equal to end date {end_date}')
+        return
+
+    region = 'bs'
+    if args.region:
+        region = args.region
+    regions = ['bs', 'med']
+    if region.lower() not in regions:
+        print(f'[ERROR] Region {region} should be in the list: {regions}')
+        return
+
+    output_file = args.output
+    if not output_file.endswith('.csv'):
+        print(f'[ERROR] Output file {output_file} shoud be a csv file')
+        return
+    if not os.path.isdir(os.path.dirname(output_file)):
+        print(f'[EROR] Output path {os.path.dirname(output_file)} is not a valid directory')
+        return
+
+    date_here = start_date
+    fout = None
+    while date_here <= end_date:
+        path_date = os.path.join(input_path, date_here.strftime('%Y'), date_here.strftime('%j'))
+        name_file = f'X{date_here.strftime("%Y%j")}-chl-{region.lower()}-hr.nc'
+        input_file = os.path.join(path_date, name_file)
+        res = None
+        if os.path.exists(input_file):
+            print(f'[INFO] Working with file: {input_file}')
+            res = get_info_aqua(input_file)
+        else:
+            print(f'[WARNING] Input file: {input_file} does not exist. Skipping date...')
+
+        if res is not None:
+            if fout is None:
+                fout = open(output_file, 'w')
+                first_line = ';'.join(list(res.keys()))
+                fout.write(first_line)
+            line = ';'.join([str(x) for x in list(res.values())])
+            fout.write('\n')
+            fout.write(line)
+        date_here = date_here + timedelta(hours=24)
+    if fout is not None:
+        fout.close()
+    print('[INFO]COMPLETED')
+
+
+def get_info_aqua(file):
+    from netCDF4 import Dataset
+    dataset = Dataset(file)
+    comment = dataset.variables['SENSORMASK'].comment
+    clist = comment[0:comment.find('.')].split(';')
+    res = {}
+    flag_names = []
+    flag_values = []
+    for c in clist:
+        flag_names.append(c.split('=')[0].strip())
+        flag_values.append(int(c.split('=')[1].strip()))
+    smask = np.array(dataset.variables['SENSORMASK']).astype(np.int64)
+    smask = smask[smask != -999]  ##only valid pixles
+    res['ntotal'] = smask.shape[0]
+    res['nvalid'] = np.count_nonzero(smask)
+    nobs = np.zeros(smask.shape)
+    for val in flag_values:
+        bitval = np.bitwise_and(smask, val)
+        bitval[bitval > 0] = 1
+        if val == 2:  ##aqua:
+            aqua_array = bitval
+        nobs = nobs + bitval
+
+    res['naqua'] = np.sum(aqua_array)
+    aqua_combined = aqua_array + nobs
+    aqua_combined[aqua_array == 0] = 0
+
+    nobs_degraded = nobs.copy()
+    nobs_degraded[aqua_array == 0] = 0
+    nobs_degraded[aqua_combined == 2] = 0
+
+    res['naqua_only'] = np.count_nonzero(aqua_combined == 2)
+    res['naqua_and1'] = np.count_nonzero(aqua_combined == 3)
+    res['naqua_and2'] = np.count_nonzero(aqua_combined == 4)
+    res['naqua_and3'] = np.count_nonzero(aqua_combined == 5)
+    res['naqua_and4'] = np.count_nonzero(aqua_combined == 6)
+    res['ndegraded'] = res['naqua_and1'] + res['naqua_and2'] + res['naqua_and3'] + res['naqua_and4']
+    res['sum_obs'] = np.sum(nobs)
+    res['sum_obs_degraded_pixels'] = np.sum(nobs_degraded)
+    res['sum_obs_aqua_degraded_pixels'] = res['naqua'] - res['naqua_only']
+    res['percent_aqua_only'] = (res['naqua_only'] / res['nvalid']) * 100
+    res['percent_degraded_pixels'] = (res['ndegraded'] / (res['nvalid']-res['naqua_only'])) * 100
+    res['percent_aqua_obs_degraded_pixels'] = (res['sum_obs_aqua_degraded_pixels'] / res[
+        'sum_obs_degraded_pixels']) * 100
+    dataset.close()
+
+    return res
+
 
 def do_doors_certo_msi_csv():
     name_in = 'DOOR_insitu_BlackSea_AeronetOC_Galata_Platform_extract_CERTO_MSI_aeronetbulgaria.csv'
@@ -192,62 +319,61 @@ def do_doors_certo_msi_csv():
     input_path = f'/mnt/c/DATA_LUIS/DOORS_WORK/in_situ_extracts/certo_msi/{name_in}'
     output_path = f'/mnt/c/DATA_LUIS/DOORS_WORK/in_situ_extracts/certo_msi/{name_out}'
     input_dir = os.path.dirname(input_path)
-    shutil.copy(input_path,output_path)
+    shutil.copy(input_path, output_path)
     import pandas as pd
-    df = pd.read_csv(output_path,sep=';')
+    df = pd.read_csv(output_path, sep=';')
     used = [0] * len(df.index)
     assigned = [0] * len(df.index)
     nmax = 0
     for name in os.listdir(input_dir):
-        file_csv = os.path.join(input_dir,name)
-        if file_csv==input_path or file_csv==output_path:
+        file_csv = os.path.join(input_dir, name)
+        if file_csv == input_path or file_csv == output_path:
             continue
         if os.path.isdir(file_csv):
             continue
-        df_here = pd.read_csv(file_csv,sep=';')
-        for index,row in df_here.iterrows():
-            if used[index]==0 and df.loc[index,'Index']>=0:
-                print('Used index is: ',index)
-                used[index]=1
-                assigned[index]=1
+        df_here = pd.read_csv(file_csv, sep=';')
+        for index, row in df_here.iterrows():
+            if used[index] == 0 and df.loc[index, 'Index'] >= 0:
+                print('Used index is: ', index)
+                used[index] = 1
+                assigned[index] = 1
 
-
-            if row['Index']>=0:
-                used[index] = used[index]+1
+            if row['Index'] >= 0:
+                used[index] = used[index] + 1
                 print('Nex index:', index, ' per file: ', name, '--->', used[index])
-                if used[index]>nmax:
+                if used[index] > nmax:
                     nmax = used[index]
 
-    for ival in range(1,nmax):
+    for ival in range(1, nmax):
         df[f'Extract_{ival}'] = 'NaN'
         df[f'Index_{ival}'] = -1
-    print('Nmax: ',nmax)
+    print('Nmax: ', nmax)
 
     for name in os.listdir(input_dir):
-        file_csv = os.path.join(input_dir,name)
-        if file_csv==input_path or file_csv==output_path:
+        file_csv = os.path.join(input_dir, name)
+        if file_csv == input_path or file_csv == output_path:
             continue
         if os.path.isdir(file_csv):
             continue
         print(name)
-        df_here = pd.read_csv(file_csv,sep=';')
-        for index,row in df_here.iterrows():
+        df_here = pd.read_csv(file_csv, sep=';')
+        for index, row in df_here.iterrows():
             if row['Index'] >= 0:
-                if assigned[index]==0:
+                if assigned[index] == 0:
                     iname = 'Index'
                     ename = 'Extract'
                 else:
                     iname = f'Index_{assigned[index]}'
                     ename = f'Extract_{assigned[index]}'
-                df.at[index,iname] = row['Index']
-                df.at[index,ename] = row['Extract']
+                df.at[index, iname] = row['Index']
+                df.at[index, ename] = row['Extract']
 
+                assigned[index] = assigned[index] + 1
 
-                assigned[index] = assigned[index]+1
+    df.loc[df['Index'] == -1, 'Extract'] = 'NaN'
 
-    df.loc[df['Index']==-1,'Extract'] = 'NaN'
+    df.to_csv(output_path, sep=';')
 
-    df.to_csv(output_path,sep=';')
 
 def do_match_ups_from_extracts():
     print('Math-ups from extracts')
@@ -261,18 +387,18 @@ def do_match_ups_from_extracts():
     rc_ini = 11
     rc_fin = 13
     from netCDF4 import Dataset
-    df = pd.read_csv(file_csv,';')
-    #col_names = df.columns.tolist() + ['RRS_412','RRS_443','RRS_490','RRS_510','RRS_560','RRS_665']
+    df = pd.read_csv(file_csv, ';')
+    # col_names = df.columns.tolist() + ['RRS_412','RRS_443','RRS_490','RRS_510','RRS_560','RRS_665']
     col_names = df.columns.tolist() + ['Chla']
     first_line = ';'.join(col_names)
-    fw = open(file_out,'w')
+    fw = open(file_out, 'w')
     fw.write(first_line)
-    for index,row in df.iterrows():
+    for index, row in df.iterrows():
         lrow = [str(x).strip() for x in list(row)]
         line = ';'.join(lrow)
 
         ##rrs
-        #index_extract = row['Index_Extract_RRS']
+        # index_extract = row['Index_Extract_RRS']
         # values = [-999] * 6
         # if index_extract>=0:
         #     name_extract = row['Extract_RRS']
@@ -286,16 +412,16 @@ def do_match_ups_from_extracts():
         #         else:
         #             values[ivar] = -999.0
         #     dataset.close()
-        #chla
+        # chla
         index_extract = row['Index_Extract_CHLA']
         values = [-999.0]
-        if index_extract>=0:
+        if index_extract >= 0:
             name_extract = row['Extract_CHLA']
-            extract_file = os.path.join(dir_extracts,f'extract_{name_extract}')
+            extract_file = os.path.join(dir_extracts, f'extract_{name_extract}')
             dataset = Dataset(extract_file)
-            chl_data = np.array(dataset.variables['satellite_CHL'][0, rc_ini:rc_fin+1,rc_ini:rc_fin+1])
+            chl_data = np.array(dataset.variables['satellite_CHL'][0, rc_ini:rc_fin + 1, rc_ini:rc_fin + 1])
             chl_data_c = chl_data[chl_data != -999.0]
-            if len(chl_data_c)>0:
+            if len(chl_data_c) > 0:
                 values[0] = np.mean(chl_data_c)
             else:
                 values[0] = -999.0
@@ -307,35 +433,37 @@ def do_match_ups_from_extracts():
         print(line)
     fw.close()
     return
+
+
 def do_check_sensor_mask():
     print('DO CHECK SENSOR MASK....')
     from datetime import timedelta
     from netCDF4 import Dataset
     input_dir = '/store3/OC/MULTI/daily_v202311_x'
     fout = '/store/COP2-OC-TAC/sensor_mask_check.csv'
-    #input_dir = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK'
-    #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/sensor_mask_check.csv'
+    # input_dir = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK'
+    # fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/sensor_mask_check.csv'
 
-    start_date = dt(1997,9,16)
-    end_date = dt(2022,12,31)
+    start_date = dt(1997, 9, 16)
+    end_date = dt(2022, 12, 31)
     date_here = start_date
     comment_prev = 'N/A'
     lines = []
-    while date_here<=end_date:
+    while date_here <= end_date:
         yearstr = date_here.strftime('%Y')
         jjjstr = date_here.strftime('%j')
-        input_file = os.path.join(input_dir,yearstr,jjjstr,f'X{yearstr}{jjjstr}-chl-med-hr.nc')
+        input_file = os.path.join(input_dir, yearstr, jjjstr, f'X{yearstr}{jjjstr}-chl-med-hr.nc')
         if os.path.exists(input_file):
             dataset = Dataset(input_file)
             comment = dataset.variables['SENSORMASK'].comment.split('.')[0]
-            if comment!=comment_prev:
+            if comment != comment_prev:
                 date_here_str = date_here.strftime('%Y-%m-%d')
                 line_here = f'{date_here_str};{comment}'
                 lines.append(line_here)
                 print(line_here)
                 comment_prev = comment
         date_here = date_here + timedelta(hours=24)
-    f1 = open(fout,'w')
+    f1 = open(fout, 'w')
     for line in lines:
         f1.write(line)
         f1.write('\n')
@@ -346,10 +474,9 @@ def do_test():
     print('TEST')
     from netCDF4 import Dataset
     file = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/X2022130-chl-med-hr.nc'
-    dataset  = Dataset(file,'r')
+    dataset = Dataset(file, 'r')
     smask = np.array(dataset.variables['SENSORMASK'][:])
-    print(smask.min(),smask.max())
-
+    print(smask.min(), smask.max())
 
     import pandas as pd
     from datetime import datetime as dt
@@ -459,16 +586,17 @@ def do_test():
     #     f1.write(line)
     # f1.close()
 
+
 def do_extract_csv():
     import pandas as pd
 
     from netCDF4 import Dataset
-    #file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation.csv'
+    # file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation.csv'
     file_csv = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_training.csv'
-    #file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MULTI/GRID_FILES/ArcGrid_65_90_4KM_GridBase.nc'
+    # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MULTI/GRID_FILES/ArcGrid_65_90_4KM_GridBase.nc'
     file_grid = '/store/COP2-OC-TAC/arc/multi/validation/ArcGrid_65_90_4KM_GridBase.nc'
     dir_dataset = '/store/COP2-OC-TAC/arc/multi/'
-    #fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation_match_ups.csv'
+    # fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6/data_for_RRS_validation_match_ups.csv'
     fout = '/store/COP2-OC-TAC/arc/multi/validation/data_for_chl_algo_training_1x1_match_ups.csv'
 
     dgrid = Dataset(file_grid)
@@ -476,22 +604,21 @@ def do_extract_csv():
     lon_array = np.array(dgrid.variables['lon'])
     dgrid.close()
 
-
     lines_out = ['CCIV6_RRS412;CCIV6_RRS443;CCIV6_RRS490;CCIV6_RRS510;CCIV6_RRS560;CCIV6_RRS665;CCIV6_CHLA']
-    df = pd.read_csv(file_csv,';')
-    for index,row in df.iterrows():
+    df = pd.read_csv(file_csv, ';')
+    for index, row in df.iterrows():
         line_out = None
         datestr = str(int(row['Date']))
-        date_here = dt.strptime(datestr,'%Y%m%d')
+        date_here = dt.strptime(datestr, '%Y%m%d')
         year_str = date_here.strftime('%Y')
         jday_str = date_here.strftime('%j')
-        dir_dataset_day = os.path.join(dir_dataset,year_str,jday_str)
+        dir_dataset_day = os.path.join(dir_dataset, year_str, jday_str)
         lat_P = float(row['lat'])
         lon_P = float(row['lon'])
         dist_squared = (lat_array - lat_P) ** 2 + (lon_array - lon_P) ** 2
-        r, c = np.unravel_index(np.argmin(dist_squared),lon_array.shape)
+        r, c = np.unravel_index(np.argmin(dist_squared), lon_array.shape)
         name_rrs = f'C{year_str}{jday_str}_rrs-arc-4km.nc'
-        file_rrs = os.path.join(dir_dataset_day,name_rrs)
+        file_rrs = os.path.join(dir_dataset_day, name_rrs)
         name_chla = f'C{year_str}{jday_str}_chl-arc-4km.nc'
         file_chla = os.path.join(dir_dataset_day, name_chla)
 
@@ -503,12 +630,12 @@ def do_extract_csv():
         if os.path.exists(file_rrs):
             print(f'[INFO] File rrs: {file_rrs}')
             drrs = Dataset(file_rrs)
-            variables = ['RRS412','RRS443','RRS490','RRS510','RRS560','RRS665']
+            variables = ['RRS412', 'RRS443', 'RRS490', 'RRS510', 'RRS560', 'RRS665']
             for variable in variables:
                 array_here = np.array(drrs.variables[variable])
 
                 ## 1x1
-                val_here = array_here[0,r,c]
+                val_here = array_here[0, r, c]
 
                 ## 3x3
                 # val_test = array_here[0,r,c]
@@ -533,7 +660,7 @@ def do_extract_csv():
             print(f'[INFO] File chl-a: {file_chla}')
             dchl = Dataset(file_chla)
             array_here = np.array(dchl.variables['CHL'])
-            val_here = array_here[0,r, c]
+            val_here = array_here[0, r, c]
             line_out = f'{line_out};{val_here}'
             dchl.close()
         else:
@@ -542,10 +669,9 @@ def do_extract_csv():
 
         lines_out.append(line_out)
 
-
     print('[INFO] Writting...')
-    fr = open(file_csv,'r')
-    fw = open(fout,'w')
+    fr = open(file_csv, 'r')
+    fw = open(fout, 'w')
     index = 0
     for line in fr:
         line_out = lines_out[index]
@@ -577,7 +703,7 @@ def do_comparison_daily_integrated():
     date_ini_str = date_ini.strftime('%Y%m%d')
     date_fin_str = date_fin.strftime('%Y%m%d')
     file_out = f'{file_out_base}_{date_ini_str}_{date_fin_str}.csv'
-    f1 = open(file_out,'w')
+    f1 = open(file_out, 'w')
     f1.write('Date;Old-Integrated;New-Daily;Ratio')
 
     date_ref = date_ini
@@ -590,25 +716,25 @@ def do_comparison_daily_integrated():
         yyyy = date_ref.strftime('%Y')
         jjj = date_ref.strftime('%j')
         name_file = f'O{date_str}_rrs-arc-fr.nc'
-        file_old = os.path.join(dirold,yyyy,jjj,name_file)
-        file_new = os.path.join(dirnew,yyyy,jjj,name_file)
+        file_old = os.path.join(dirold, yyyy, jjj, name_file)
+        file_new = os.path.join(dirnew, yyyy, jjj, name_file)
         val_old = -999
         val_new = -999
         val_ratio = -999
         if os.path.exists(file_old):
             dold = Dataset(file_old)
             array_old = np.array(dold.variables['RRS510'])
-            array_valid_old = array_old[array_old!=-999]
-            val_old = np.mean(array_valid_old)*1000
+            array_valid_old = array_old[array_old != -999]
+            val_old = np.mean(array_valid_old) * 1000
             dold.close()
         if os.path.exists(file_new):
             dnew = Dataset(file_new)
             array_new = np.array(dnew.variables['RRS510'])
-            array_valid_new = array_new[array_new!=-999]
-            val_new = np.mean(array_valid_new)*1000
+            array_valid_new = array_new[array_new != -999]
+            val_new = np.mean(array_valid_new) * 1000
             dnew.close()
-        if val_old!=-999 and val_new!=-999:
-            val_ratio = val_old/val_new
+        if val_old != -999 and val_new != -999:
+            val_ratio = val_old / val_new
         line = f'{date_str};{val_old};{val_new};{val_ratio}'
         f1.write('\n')
         f1.write(line)
@@ -625,54 +751,54 @@ def do_comparasion_multi_olci_byday():
     var = 'CHL'
     dir_comparison = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/COMPARISON_{var}'
     fout = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_COMPARISON_OLCI_MULTI/daily_check_{var}.csv'
-    f1= open(fout,'w')
+    f1 = open(fout, 'w')
     f1.write('date;multival;olcival;ratio')
-    date_ini = dt(2016,5,1)
-    date_fin = dt(2023,5,31)
+    date_ini = dt(2016, 5, 1)
+    date_fin = dt(2023, 5, 31)
     date_ref = date_ini
-    while date_ref<=date_fin:
-        if date_ref.month<=2 or date_ref.month>=11:
+    while date_ref <= date_fin:
+        if date_ref.month <= 2 or date_ref.month >= 11:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==6 and date_ref.day==24 and date_ref.year==2019:
+        if date_ref.month == 6 and date_ref.day == 24 and date_ref.year == 2019:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==6 and date_ref.day==27 and date_ref.year==2019:
+        if date_ref.month == 6 and date_ref.day == 27 and date_ref.year == 2019:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==7 and date_ref.day==26 and date_ref.year==2019:
+        if date_ref.month == 7 and date_ref.day == 26 and date_ref.year == 2019:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==7 and date_ref.day==29 and date_ref.year==2019:
+        if date_ref.month == 7 and date_ref.day == 29 and date_ref.year == 2019:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==3 and date_ref.day==1 and date_ref.year==2020:
+        if date_ref.month == 3 and date_ref.day == 1 and date_ref.year == 2020:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==9 and date_ref.day==11 and date_ref.year==2021:
+        if date_ref.month == 9 and date_ref.day == 11 and date_ref.year == 2021:
             date_ref = date_ref + timedelta(hours=24)
             continue
 
-        #chl
-        if date_ref.month==3 and date_ref.day==9 and date_ref.year==2020:
+        # chl
+        if date_ref.month == 3 and date_ref.day == 9 and date_ref.year == 2020:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==7 and date_ref.day==13 and date_ref.year==2020:
+        if date_ref.month == 7 and date_ref.day == 13 and date_ref.year == 2020:
             date_ref = date_ref + timedelta(hours=24)
             continue
-        if date_ref.month==4 and date_ref.day==26 and date_ref.year==2023:
+        if date_ref.month == 4 and date_ref.day == 26 and date_ref.year == 2023:
             date_ref = date_ref + timedelta(hours=24)
             continue
 
         date_str = date_ref.strftime('%Y%j')
         print(date_str)
         name_comparison = f'Comparison_{var}_{date_str}.csv'
-        file_comparison = os.path.join(dir_comparison,name_comparison)
+        file_comparison = os.path.join(dir_comparison, name_comparison)
 
-        df = pd.read_csv(file_comparison,sep=';')
+        df = pd.read_csv(file_comparison, sep=';')
         val_multi = df['MultiVal'].to_numpy()
         val_olci = df['OlciVal'].to_numpy()
-        ratio = np.log10(val_olci)/np.log10(val_multi)
+        ratio = np.log10(val_olci) / np.log10(val_multi)
         avg_multi = np.log10(np.mean(val_multi))
         avg_olci = np.log10(np.mean(val_olci))
         avg_ratio = np.mean(ratio)
@@ -682,6 +808,7 @@ def do_comparasion_multi_olci_byday():
 
         date_ref = date_ref + timedelta(hours=24)
     f1.close()
+
 
 def do_comparison_multi_olci():
     import pandas as pd
@@ -772,7 +899,7 @@ def do_comparison_multi_olci():
                 x = np.argmin(np.abs(lon_array - lon_here))
             elif len(lat_array.shape) == 2:
                 d = ((lat_array - lat_here) * (lat_array - lat_here)) + (
-                            (lon_array - lon_here) * (lon_array - lon_here))
+                        (lon_array - lon_here) * (lon_array - lon_here))
                 ixs = np.unravel_index(np.argmin(d), d.shape)
                 y = ixs[0]
                 x = ixs[1]
@@ -800,7 +927,7 @@ def do_comparison_multi_olci():
 
         param = args.input.split('%')[1]
         param_name = param
-        if param.startswith('RRS') and region!='arc':
+        if param.startswith('RRS') and region != 'arc':
             param_name = 'RRS'
         dir_comparison = os.path.join(dir_out_base, f'COMPARISON_{param_name}')
 
@@ -949,7 +1076,6 @@ def do_comparison_multi_olci():
                     indices[di] = 1
             print('------------------------')
 
-
         for name in os.listdir(dir_out_base):
             if not name.endswith('_valid.csv'):
                 continue
@@ -1032,14 +1158,14 @@ def do_comparison_multi_olci():
     nhours = 240
     if args.interval:
         nhours = int(args.interval) * 24
-    if region=='arc':
+    if region == 'arc':
         dir_olci_orig = '/store/COP2-OC-TAC/arc/integrated'
         dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
-    if region=='arcn':
+    if region == 'arcn':
         dir_olci_orig = '/store/COP2-OC-TAC/arc/daily'
         dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
         region = 'arc'
-        #nhours = 24
+        # nhours = 24
     # dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
     # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'
     # FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
@@ -1091,12 +1217,12 @@ def do_comparison_multi_olci():
         if args.verbose:
             print(f'[INFO] Worknig for date: {date_here}...')
 
-        if region=='arc':
-           if date_here.month>=11 or date_here.month<=2:
-               date_here = date_here + timedelta(hours=nhours)
-               continue
+        if region == 'arc':
+            if date_here.month >= 11 or date_here.month <= 2:
+                date_here = date_here + timedelta(hours=nhours)
+                continue
         for param, dir_out in zip(params, dir_outs):
-            print(param,dir_out)
+            print(param, dir_out)
             # PARAMS, TO DEFINE FILE NAMES
             param_multi = param
             param_olci = param
@@ -1116,7 +1242,6 @@ def do_comparison_multi_olci():
                 var_olci = 'CHL'
             if param_olci == 'TRANSP':
                 var_olci = 'KD490'
-
 
             year = date_here.strftime('%Y')
             jday = date_here.strftime('%j')
@@ -1169,7 +1294,6 @@ def do_comparison_multi_olci():
                         make_comparison_impl(file_grid, None, file_olci, file_out, None, var_olci)
 
         date_here = date_here + timedelta(hours=nhours)
-
 
     # getting global points
     # val = 'CHLA'
@@ -1467,7 +1591,7 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         val_olci = -999
         if len(array_here_good) == nvalid:
             val_olci = np.mean(array_here[array_here != -999])
-            #val_olci = val_olci/np.pi
+            # val_olci = val_olci/np.pi
 
         if val_olci != -999 and val_multi != -999:
             valid = 1
