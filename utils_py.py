@@ -253,8 +253,10 @@ def do_aqua_check():
             if fout is None:
                 fout = open(output_file, 'w')
                 first_line = ';'.join(list(res.keys()))
+                first_line = f'date;{first_line}'
                 fout.write(first_line)
             line = ';'.join([str(x) for x in list(res.values())])
+            line = f'{date_here.strftime("%Y-%m-%d")};{line}'
             fout.write('\n')
             fout.write(line)
         date_here = date_here + timedelta(hours=24)
