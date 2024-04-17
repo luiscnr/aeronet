@@ -238,6 +238,9 @@ def do_aqua_check():
 
     date_here = start_date
     fout = None
+    array_sum = None
+    input_file_check = None
+    nfiles = 0
     while date_here <= end_date:
         path_date = os.path.join(input_path, date_here.strftime('%Y'), date_here.strftime('%j'))
         name_file = f'X{date_here.strftime("%Y%j")}-chl-{region.lower()}-hr.nc'
@@ -245,7 +248,9 @@ def do_aqua_check():
         res = None
         if os.path.exists(input_file):
             print(f'[INFO] Working with file: {input_file}')
-            res = get_info_aqua(input_file)
+            input_file_check = input_file
+            res,array_sum = get_info_aqua(input_file,array_sum)
+            nfiles = nfiles + 1
         else:
             print(f'[WARNING] Input file: {input_file} does not exist. Skipping date...')
 
@@ -262,10 +267,46 @@ def do_aqua_check():
         date_here = date_here + timedelta(hours=24)
     if fout is not None:
         fout.close()
+
+    if nfiles>0 and input_file_check is not None:
+        array_porc = (array_sum/nfiles)*100
+        array_porc[array_sum==-999.0] = -999.0
+        output_file_nc = output_file.replace('.csv','.nc')
+        from netCDF4 import Dataset
+        dataset_in = Dataset(input_file_check)
+        dataset_out = Dataset(output_file_nc,'w')
+        # copy global attributes all at once via dictionary
+        dataset_out.setncatts(dataset_in.__dict__)
+        for name, dimension in dataset_in.dimensions.items():
+            dataset_out.createDimension(
+                name, (len(dimension) if not dimension.isunlimited() else None))
+        for name, variable in dataset_in.variables.items():
+            if name=='lat' or name=='lon':
+                fill_value = None
+                if '_FillValue' in list(dataset_in.ncattrs()):
+                    fill_value = variable._FillValue
+                var = dataset_out.createVariable(name, variable.datatype, variable.dimensions, fill_value=fill_value, zlib=True,
+                                    shuffle=True, complevel=6)
+                var.setncatts(dataset_in[name].__dict__)
+                var[:] = dataset_in[name][:]
+
+        var = dataset_out.createVariable('NAqua','i4',('lat','lon'),fill_value=-999,zlib=True,
+                                 shuffle=True, complevel=6)
+        var[:] = array_sum[:]
+        var = dataset_out.createVariable('PAqua', 'f4', ('lat', 'lon'), fill_value=-999,zlib=True,
+                                 shuffle=True, complevel=6)
+        var[:] = array_porc[:]
+        dataset_out.start_date = start_date.strftime('%Y-%m-%d')
+        dataset_out.end_date = end_date.strftime('%Y-%m-%d')
+        dataset_in.close()
+        dataset_out.close()
+
+
     print('[INFO]COMPLETED')
 
 
-def get_info_aqua(file):
+
+def get_info_aqua(file,array_sum):
     from netCDF4 import Dataset
     dataset = Dataset(file)
     comment = dataset.variables['SENSORMASK'].comment
@@ -277,6 +318,11 @@ def get_info_aqua(file):
         flag_names.append(c.split('=')[0].strip())
         flag_values.append(int(c.split('=')[1].strip()))
     smask = np.array(dataset.variables['SENSORMASK']).astype(np.int64)
+    aqua_map = smask.copy()
+    aqua_map[smask > 0] = 0
+    aqua_map[smask==2]=1
+
+
     smask = smask[smask != -999]  ##only valid pixles
     res['ntotal'] = smask.shape[0]
     res['nvalid'] = np.count_nonzero(smask)
@@ -294,6 +340,11 @@ def get_info_aqua(file):
     res['naqua'] = np.sum(aqua_array)
     aqua_combined = aqua_array + nobs
     aqua_combined[aqua_array == 0] = 0
+
+    if array_sum is None:
+        array_sum = aqua_map
+    else:
+        array_sum[aqua_map==1] = array_sum[aqua_map==1]+ 1
 
     nobs_degraded = nobs.copy()
     nobs_degraded[aqua_array == 0] = 0
@@ -314,7 +365,7 @@ def get_info_aqua(file):
         'sum_obs_degraded_pixels']) * 100
     dataset.close()
 
-    return res
+    return res,array_sum
 
 
 def do_doors_certo_msi_csv():
