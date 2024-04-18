@@ -344,7 +344,8 @@ def get_info_aqua(file,array_sum):
     if array_sum is None:
         array_sum = aqua_map
     else:
-        array_sum[aqua_map==1] = array_sum[aqua_map==1]+ 1
+        array_sum[aqua_map == 1 & array_sum>=0] = array_sum[aqua_map==1 & array_sum>=0]+ 1
+        array_sum[aqua_map == 1 & array_sum < 0] = 1
 
     nobs_degraded = nobs.copy()
     nobs_degraded[aqua_array == 0] = 0
