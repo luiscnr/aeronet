@@ -960,7 +960,7 @@ def do_comparison_cmems_certo():
         return
     # SERVER
     if dir_out_base.startswith('/store'):
-        dir_cmems_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+        dir_cmems_orig = '/dst04-data1/OC/OLCI/daily_v202311_bc'
         dir_certo_orig = '/store3/DOORS/CERTO_SOURCES'
     # LOCAL
     elif dir_out_base.startswith('/mnt'):
