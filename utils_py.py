@@ -18,7 +18,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
                              'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
-                             'comparison_multi_olci', 'extract_csv', 'checksensormask', 'match-ups_from_extracts',
+                             'comparison_multi_olci', 'comparison_cmems_certo', 'extract_csv', 'checksensormask',
+                             'match-ups_from_extracts',
                              'doors_certo_msi_csv', 'aqua_check'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
@@ -173,6 +174,9 @@ def main():
         # do_comparasion_multi_olci_byday()
         # do_comparison_daily_integrated()
 
+    if args.mode == 'comparison_cmems_certo':
+        do_comparison_cmems_certo()
+
     if args.mode == 'extract_csv':
         do_extract_csv()
 
@@ -249,7 +253,7 @@ def do_aqua_check():
         if os.path.exists(input_file):
             print(f'[INFO] Working with file: {input_file}')
             input_file_check = input_file
-            res,array_sum = get_info_aqua(input_file,array_sum)
+            res, array_sum = get_info_aqua(input_file, array_sum)
             nfiles = nfiles + 1
         else:
             print(f'[WARNING] Input file: {input_file} does not exist. Skipping date...')
@@ -268,45 +272,44 @@ def do_aqua_check():
     if fout is not None:
         fout.close()
 
-    if nfiles>0 and input_file_check is not None:
-        array_porc = (array_sum/nfiles)*100
-        array_porc[array_sum==-999.0] = -999.0
-        output_file_nc = output_file.replace('.csv','.nc')
+    if nfiles > 0 and input_file_check is not None:
+        array_porc = (array_sum / nfiles) * 100
+        array_porc[array_sum == -999.0] = -999.0
+        output_file_nc = output_file.replace('.csv', '.nc')
         from netCDF4 import Dataset
         dataset_in = Dataset(input_file_check)
-        dataset_out = Dataset(output_file_nc,'w')
+        dataset_out = Dataset(output_file_nc, 'w')
         # copy global attributes all at once via dictionary
         dataset_out.setncatts(dataset_in.__dict__)
         for name, dimension in dataset_in.dimensions.items():
             dataset_out.createDimension(
                 name, (len(dimension) if not dimension.isunlimited() else None))
         for name, variable in dataset_in.variables.items():
-            if name=='lat' or name=='lon':
+            if name == 'lat' or name == 'lon':
                 fill_value = None
                 if '_FillValue' in list(dataset_in.ncattrs()):
                     fill_value = variable._FillValue
-                var = dataset_out.createVariable(name, variable.datatype, variable.dimensions, fill_value=fill_value, zlib=True,
-                                    shuffle=True, complevel=6)
+                var = dataset_out.createVariable(name, variable.datatype, variable.dimensions, fill_value=fill_value,
+                                                 zlib=True,
+                                                 shuffle=True, complevel=6)
                 var.setncatts(dataset_in[name].__dict__)
                 var[:] = dataset_in[name][:]
 
-        var = dataset_out.createVariable('NAqua','i4',('lat','lon'),fill_value=-999,zlib=True,
-                                 shuffle=True, complevel=6)
+        var = dataset_out.createVariable('NAqua', 'i4', ('lat', 'lon'), fill_value=-999, zlib=True,
+                                         shuffle=True, complevel=6)
         var[:] = array_sum[:]
-        var = dataset_out.createVariable('PAqua', 'f4', ('lat', 'lon'), fill_value=-999,zlib=True,
-                                 shuffle=True, complevel=6)
+        var = dataset_out.createVariable('PAqua', 'f4', ('lat', 'lon'), fill_value=-999, zlib=True,
+                                         shuffle=True, complevel=6)
         var[:] = array_porc[:]
         dataset_out.start_date = start_date.strftime('%Y-%m-%d')
         dataset_out.end_date = end_date.strftime('%Y-%m-%d')
         dataset_in.close()
         dataset_out.close()
 
-
     print('[INFO]COMPLETED')
 
 
-
-def get_info_aqua(file,array_sum):
+def get_info_aqua(file, array_sum):
     from netCDF4 import Dataset
     dataset = Dataset(file)
     comment = dataset.variables['SENSORMASK'].comment
@@ -320,8 +323,7 @@ def get_info_aqua(file,array_sum):
     smask = np.array(dataset.variables['SENSORMASK']).astype(np.int64)
     aqua_map = smask.copy()
     aqua_map[smask > 0] = 0
-    aqua_map[smask==2]=1
-
+    aqua_map[smask == 2] = 1
 
     smask = smask[smask != -999]  ##only valid pixles
     res['ntotal'] = smask.shape[0]
@@ -331,7 +333,7 @@ def get_info_aqua(file,array_sum):
     for val in flag_values:
         bitval = np.bitwise_and(smask, val)
         bitval[bitval > 0] = 1
-        if np.sum(bitval)>0:
+        if np.sum(bitval) > 0:
             nsensors = nsensors + 1
         if val == 2:  ##aqua:
             aqua_array = bitval
@@ -344,8 +346,9 @@ def get_info_aqua(file,array_sum):
     if array_sum is None:
         array_sum = aqua_map
     else:
-        array_sum[np.logical_and(aqua_map == 1,array_sum>=0)] = array_sum[np.logical_and(aqua_map == 1,array_sum>=0)]+ 1
-        array_sum[np.logical_and(aqua_map == 1,array_sum<0)] = 1
+        array_sum[np.logical_and(aqua_map == 1, array_sum >= 0)] = array_sum[np.logical_and(aqua_map == 1,
+                                                                                            array_sum >= 0)] + 1
+        array_sum[np.logical_and(aqua_map == 1, array_sum < 0)] = 1
 
     nobs_degraded = nobs.copy()
     nobs_degraded[aqua_array == 0] = 0
@@ -361,12 +364,12 @@ def get_info_aqua(file,array_sum):
     res['sum_obs_degraded_pixels'] = np.sum(nobs_degraded)
     res['sum_obs_aqua_degraded_pixels'] = res['naqua'] - res['naqua_only']
     res['percent_aqua_only'] = (res['naqua_only'] / res['nvalid']) * 100
-    res['percent_degraded_pixels'] = (res['ndegraded'] / (res['nvalid']-res['naqua_only'])) * 100
+    res['percent_degraded_pixels'] = (res['ndegraded'] / (res['nvalid'] - res['naqua_only'])) * 100
     res['percent_aqua_obs_degraded_pixels'] = (res['sum_obs_aqua_degraded_pixels'] / res[
         'sum_obs_degraded_pixels']) * 100
     dataset.close()
 
-    return res,array_sum
+    return res, array_sum
 
 
 def do_doors_certo_msi_csv():
@@ -866,6 +869,197 @@ def do_comparasion_multi_olci_byday():
         date_ref = date_ref + timedelta(hours=24)
     f1.close()
 
+
+def do_comparison_cmems_certo():
+    import pandas as pd
+    from netCDF4 import Dataset
+    import numpy as np
+    do_grid = False
+    if args.input == 'GRID':
+        do_grid = True
+
+    if do_grid:
+        file_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/Grid_CMEMS_OLCI_BS_OLD.csv'
+        file_grid_cmems = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/Grid_CMEMS_OLCI_BS.csv'
+        file_grid_certo = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/Grid_CERTO_OLCI_BS.csv'
+        file_input_certo = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/CERTO_blk_20170629_OLCI_RES300__final_l3_product.nc'
+        dataset = Dataset(file_input_certo)
+        lat_array = np.array(dataset.variables['lat'])
+        lon_array = np.array(dataset.variables['lon'])
+        dataset.close()
+        # nlat = len(lat_array)
+        # nlon = len(lon_array)
+
+        grid = pd.read_csv(file_orig, sep=';')
+        lat_grid = grid['Latitude'].to_numpy()
+        lon_grid = grid['Longitude'].to_numpy()
+        y_grid = grid['YCMEMS'].to_numpy()
+        x_grid = grid['XCMEMS'].to_numpy()
+
+        fCerto = open(file_grid_certo, 'w')
+        line = f'Index;YCERTO;XCERTO;Latitude;Longitude'
+        fCerto.write(line)
+
+        fCmems = open(file_grid_cmems, 'w')
+        line = f'Index;YCMEMS;XCMEMS;Latitude;Longitude'
+        fCmems.write(line)
+
+        all_dist = []
+        #import geopy.distance
+
+        for idx in range(len(lat_grid)):
+            index = idx + 1
+            lat_here = lat_grid[idx]
+            lon_here = lon_grid[idx]
+            y_here = y_grid[idx]
+            x_here = x_grid[idx]
+            y = np.argmin(np.abs(lat_array - lat_here))
+            x = np.argmin(np.abs(lon_array - lon_here))
+            lat_altro = lat_array[y]
+            lon_altro = lon_array[x]
+
+            coord_1 = (lat_here, lon_here)
+            coord_2 = (lat_altro, lon_altro)
+            #dist = geopy.distance.geodesic(coord_1, coord_2).m
+            dist = abs(lat_here-lon_here)
+
+            if dist < 160.0:
+                line_certo = f'{index};{y};{x};{lat_here};{lon_here}'
+                fCerto.write('\n')
+                fCerto.write(line_certo)
+                line_cmems = f'{index};{y_here};{x_here};{lat_altro};{lon_altro}'
+                fCmems.write('\n')
+                fCmems.write(line_cmems)
+
+                all_dist.append(dist)
+                print(index, '->', dist)
+
+        fCmems.close()
+        fCerto.close()
+        dist_avg = np.mean(np.array(all_dist))
+        dist_min = np.min(np.array(all_dist))
+        dist_max = np.max(np.array(all_dist))
+        print('Arerage distance:', dist_avg, dist_min, dist_max)
+        file_end = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/Grid_OLCI_BS.csv'
+        dfcmems = pd.read_csv(file_grid_cmems, sep=';')
+        dfcerto = pd.read_csv(file_grid_certo, sep=';')
+        dfcmems['YCERTO'] = dfcerto['YCERTO']
+        dfcmems['XCERTO'] = dfcerto['XCERTO']
+        dfcmems['CMEMSVal'] = -999.0
+        dfcmems['CERTOVal'] = -999.0
+        dfcmems['Valid'] = 0
+        dfcmems.to_csv(file_end, sep=';')
+        return
+
+    ##comparison
+    print('[INFO] STARTED  COMPARISON...')
+    from datetime import datetime as dt
+    dir_out_base = args.output
+    if not os.path.exists(dir_out_base):
+        print(f'[ERROR] Output dir: {dir_out_base} does not exist')
+        return
+    # SERVER
+    if dir_out_base.startswith('/store'):
+        dir_cmems_orig = '/dst04-data1/OC/OLCI/daily_3.01'
+        dir_certo_orig = '/store3/DOORS/CERTO_SOURCES'
+    # LOCAL
+    elif dir_out_base.startswith('/mnt'):
+        dir_cmems_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CMEMS'
+        dir_certo_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CERTO'
+    else:
+        print('Check dir out base')
+        return
+    nhours = 240
+    if args.interval:
+        nhours = int(args.interval) * 24
+    if args.input == 'RRS':
+        params = ['RRS']
+        wl_cmems = ['400', '412_5', '442_5', '490', '510', '560', '620', '665', '673_75', '681_25', '708_75', '753_75',
+                    '778_75', '865', '885', '1020']
+        wl_certo = ['400', '412', '443', '490', '510', '560', '620', '665', '674', '681', '709', '754', '779', '865',
+                    '885', '1020']
+
+
+    dir_outs = []
+    for param in params:
+        dir_out = os.path.join(dir_out_base, f'COMPARISON_{param}')
+        if not os.path.exists(dir_out):
+            os.mkdir(dir_out)
+        dir_outs.append(dir_out)
+    file_grid = os.path.join(dir_out_base, f'Grid_OLCI_BS.csv')
+
+    optical_water_types = ['blended_dominant_owt','owt_dominant_OWT']
+
+    if args.input == 'RRS':
+        col_names_cmems = []
+        col_names_certo = []
+        file_new_grid = os.path.join(dir_out_base, f'Grid_OLCI_BS_Bands.csv')
+        dfgrid = pd.read_csv(file_grid, sep=';')
+
+        for wl in wl_cmems:
+            new_col = f'CMEMSVal_RRS_{wl}'
+            col_names_cmems.append(new_col)
+            dfgrid[new_col] = -999.0
+        for wl in wl_certo:
+            new_col = f'CERTOVal_RRS_{wl}'
+            col_names_certo.append(new_col)
+            dfgrid[new_col] = -999.0
+        for owt in optical_water_types:
+            dfgrid[owt] = -999.0
+        dfgrid = dfgrid.drop('CMEMSVal', axis=1)
+        dfgrid = dfgrid.drop('CERTOVal', axis=1)
+        dfgrid.to_csv(file_new_grid, sep=';')
+        file_grid = file_new_grid
+
+    start_date = dt.strptime(args.start_date, '%Y-%m-%d')
+    end_date = dt.strptime(args.end_date, '%Y-%m-%d')
+    date_here = start_date
+
+    while date_here <= end_date:
+
+        if args.verbose:
+            print(f'[INFO] Worknig for date: {date_here}...')
+
+        for param, dir_out in zip(params, dir_outs):
+            #print(param, dir_out)
+            # PARAMS, TO DEFINE FILE NAMES
+            param_cmems = param
+            param_certo = param
+            # var_cmems = param_cmems
+            # var_certo = param_certo
+            # if param_olci == 'PLANKTON':
+            #     var_olci = 'CHL'
+            # if param_olci == 'TRANSP':
+            #     var_olci = 'KD490'
+
+            year = date_here.strftime('%Y')
+            jday = date_here.strftime('%j')
+            dir_cmems = os.path.join(dir_cmems_orig, year, jday)
+            dir_certo = os.path.join(dir_certo_orig, year, jday)
+
+            if os.path.exists(dir_cmems) and os.path.exists(dir_certo):
+                if param_cmems == 'RRS':
+                    files_cmems = []
+                    file_certo = os.path.join(dir_certo,f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc')
+                    do_proc = True
+                    for wlc in wl_cmems:
+                        file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
+                        if os.path.exists(file_cmems):
+                            files_cmems.append(file_cmems)
+                        else:
+                            print(f'[WARNING] File CMEMS {file_cmems} does not exist...')
+                            do_proc = False
+                            break
+                    if do_proc:
+                        do_proc = os.path.exists(file_certo)
+                        if do_proc:
+                            file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
+                            if os.path.exists(file_out):
+                                print(f'[WARNING] File: {file_out} already exists. Skipping...')
+                            else:
+                                make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems,wl_certo, col_names_cmems, col_names_certo,optical_water_types)
+
+        date_here = date_here + timedelta(hours=nhours)
 
 def do_comparison_multi_olci():
     import pandas as pd
@@ -1729,6 +1923,94 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
 
     grid_valid = grid[grid['Valid'] == 1]
     grid_valid.to_csv(file_out, sep=';')
+
+
+def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems, wl_certo, col_names_cmems,col_names_certo,optical_water_types):
+
+    from netCDF4 import Dataset
+    grid = pd.read_csv(file_grid, sep=';')
+
+    if args.verbose:
+        print(f'[INFO] Creating CMEMS array...')
+    num_m = len(files_cmems)
+    for idx in range(num_m):
+        file_cmems = files_cmems[idx]
+        wlc = wl_cmems[idx]
+        dataset_cmems = Dataset(file_cmems)
+        variable_cmems = f'RRS{wlc}'
+        array_c = np.array(dataset_cmems.variables[variable_cmems])
+        if idx == 0:
+            fill_value_cmems = dataset_cmems.variables[variable_cmems]._FillValue
+            s = array_c.shape
+            array_cmems = np.zeros((num_m, s[1], s[2]))
+        array_cmems[idx, :, :] = array_c[0, :, :]
+        dataset_cmems.close()
+
+    if args.verbose:
+        print(f'[INFO] Creating CERTO array...')
+    dataset_certo = Dataset(file_certo)
+    for idx,wl in enumerate(wl_certo):
+        variable_certo = f'Rw{wl}_rep'
+        array_c = np.array(dataset_certo.variables[variable_certo])
+        if idx == 0:
+            fill_value_certo = dataset_certo.variables[variable_certo]._FillValue
+            s = array_c.shape
+            array_certo = np.zeros((num_m, s[1], s[2]))
+            if len(optical_water_types) > 0:
+                array_owt = np.zeros((len(optical_water_types), s[1], s[2]))
+        array_certo[idx, :, :] = array_c[0, :, :]
+
+    if len(optical_water_types) > 0:
+        for idx,owt in enumerate(optical_water_types):
+            array_c = np.array(dataset_certo.variables[owt])
+            array_owt[idx,:,:] = array_c[0,:,:]
+
+
+    dataset_certo.close()
+
+
+
+    nvalid = 0
+    required_valid_pixels = num_m*9
+    if args.verbose:
+        print(f'[INFO] Number of bands: {num_m}. Valid pixels per band: 9. Required valid pixels: {required_valid_pixels}')
+        print(f'[INFO] Checking grid values...')
+    for index, row in grid.iterrows():
+        ycmems = int(row['YCMEMS'])
+        xcmems = int(row['XCMEMS'])
+        ycerto = int(row['YCERTO'])
+        xcerto = int(row['XCERTO'])
+        array_cmems_here = array_cmems[:, ycmems - 1:ycmems + 2, xcmems - 1:xcmems + 2]
+        array_cmems_good = array_cmems_here[array_cmems_here != fill_value_cmems]
+        array_certo_here = array_certo[:, ycerto - 1:ycerto + 2, xcerto - 1:xcerto + 2]
+        array_certo_good = array_certo_here[array_certo_here != fill_value_certo]
+        valid = 0
+
+        if len(array_certo_good)>=required_valid_pixels and len(array_cmems_good)>=required_valid_pixels:
+            nvalid = nvalid + 1
+            valid = 1
+
+        grid.loc[index, 'Valid'] = valid
+        if valid == 1:
+            spectra_cmems = np.mean(array_cmems_here,axis=(1,2))
+            spectra_certo = np.mean(array_certo_here,axis=(1,2))
+            spectra_certo = spectra_certo / np.pi
+            grid.loc[index, col_names_cmems] = spectra_cmems
+            grid.loc[index, col_names_certo] = spectra_certo
+            if len(optical_water_types) > 0:
+                res_owt = np.zeros(len(optical_water_types))
+                for iowt in range(len(optical_water_types)):
+                    array_owt_here = array_owt[iowt, ycerto - 1:ycerto + 2, xcerto - 1:xcerto + 2]
+                    res_owt[iowt] = np.argmax(np.bincount(array_owt_here.flatten().astype(np.int32)))
+                grid.loc[index,optical_water_types] = res_owt
+    if nvalid>0:
+        grid_valid = grid[grid['Valid'] == 1]
+        grid_valid.to_csv(file_out, sep=';')
+        if args.verbose:
+            print(f'[INFO] Completed. Number of valid values: {nvalid}')
+    else:
+        print(f'[WARNING] Valid pixels were not found')
+
 
 
 def copy_files():
