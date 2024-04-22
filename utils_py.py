@@ -967,7 +967,6 @@ def do_comparison_cmems_certo():
         dir_cmems_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CMEMS'
         dir_certo_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CERTO'
     else:
-        print('Check dir out base')
         return
     nhours = 240
     if args.interval:
@@ -1058,7 +1057,11 @@ def do_comparison_cmems_certo():
                                 print(f'[WARNING] File: {file_out} already exists. Skipping...')
                             else:
                                 make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems,wl_certo, col_names_cmems, col_names_certo,optical_water_types)
-
+            else:
+                if not os.path.exists(dir_cmems):
+                    print(f'[WARNING] CMEMS path {dir_cmems} does not exits. Skipping...')
+                if not os.path.exists(dir_certo):
+                    print(f'[WARNING] CERTO path {dir_certo} does not exits. Skipping...')
         date_here = date_here + timedelta(hours=nhours)
 
 def do_comparison_multi_olci():
@@ -1999,9 +2002,14 @@ def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_c
             grid.loc[index, col_names_certo] = spectra_certo
             if len(optical_water_types) > 0:
                 res_owt = np.zeros(len(optical_water_types))
+
                 for iowt in range(len(optical_water_types)):
                     array_owt_here = array_owt[iowt, ycerto - 1:ycerto + 2, xcerto - 1:xcerto + 2]
-                    res_owt[iowt] = np.argmax(np.bincount(array_owt_here.flatten().astype(np.int32)))
+                    array_owt_here = array_owt_here[array_owt_here<18]
+                    if len(array_owt_here)==0:
+                        res_owt[iowt]=-1
+                    else:
+                        res_owt[iowt] = np.argmax(np.bincount(array_owt_here.flatten().astype(np.int32)))
                 grid.loc[index,optical_water_types] = res_owt
     if nvalid>0:
         grid_valid = grid[grid['Valid'] == 1]
