@@ -1036,10 +1036,11 @@ def do_comparison_cmems_certo():
             dir_cmems = os.path.join(dir_cmems_orig, year, jday)
             dir_certo = os.path.join(dir_certo_orig, year, jday)
 
-            if os.path.exists(dir_cmems) and os.path.exists(dir_certo):
+            if os.path.exists(dir_cmems):
                 if param_cmems == 'RRS':
                     files_cmems = []
-                    file_certo = os.path.join(dir_certo,f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc')
+                    name_certo = f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc'
+                    file_certo = os.path.join(dir_certo,name_certo)
                     do_proc = True
                     for wlc in wl_cmems:
                         file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
@@ -1050,19 +1051,52 @@ def do_comparison_cmems_certo():
                             do_proc = False
                             break
                     if do_proc:
-                        do_proc = os.path.exists(file_certo)
+                        try_download = False
+                        if not os.path.exists(file_certo):
+                            try_download = True
+                        if os.path.exists(file_certo) and os.stat(file_certo).st_size==0:
+                            os.remove(file_certo)
+                            try_download = True
+                        if try_download:
+                            try:
+                                dir_certo_year = os.path.join(dir_certo_orig,year)
+                                if not os.path.isdir(dir_certo_year):
+                                    os.mkdir(dir_certo_year)
+                                dir_certo_jday = os.path.join(dir_certo_year,jday)
+                                if not os.path.isdir(dir_certo_jday):
+                                    os.mkdir(dir_certo_jday)
+                                download_olci_source(name_certo,file_certo)
+                            except:
+                                pass
+                        do_proc = os.path.exists(file_certo) and os.stat(file_certo).st_size>0
                         if do_proc:
                             file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
                             if os.path.exists(file_out):
                                 print(f'[WARNING] File: {file_out} already exists. Skipping...')
                             else:
                                 make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems,wl_certo, col_names_cmems, col_names_certo,optical_water_types)
+                        else:
+                            print(f'[WARNING] File CERTO {file_certo} is not available. Skipping....')
             else:
                 if not os.path.exists(dir_cmems):
                     print(f'[WARNING] CMEMS path {dir_cmems} does not exits. Skipping...')
                 if not os.path.exists(dir_certo):
                     print(f'[WARNING] CERTO path {dir_certo} does not exits. Skipping...')
         date_here = date_here + timedelta(hours=nhours)
+
+def download_olci_source(namefile,file_out):
+    ##DONWLOAD
+    cmd = f'wget --user=rsg_dump --password=yohlooHohw2Pa9ohv1Chi ftp://ftp.rsg.pml.ac.uk/DOORS_matchups/OLCI/{namefile} -O {file_out}'
+    if args.verbose:
+        print(f'[INFO] Trying download with cmd:')
+        print(f'[INFO] {cmd}')
+
+    proc = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    try:
+        outs, errs = proc.communicate(timeout=1800)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        outs, errs = proc.communicate()
 
 def do_comparison_multi_olci():
     import pandas as pd
