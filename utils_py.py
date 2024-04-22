@@ -583,6 +583,7 @@ def do_test():
                 break
         if not valid:
             print(f'Folder out: {folder_out} is not valid')
+            os.rename(file, file_bad)
 
 
 
