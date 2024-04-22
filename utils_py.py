@@ -34,6 +34,9 @@ args = parser.parse_args()
 
 
 def main():
+    if do_test():
+        return
+
     print('[INFO] Started')
     if args.mode == 'concatdf':
         input_path = args.input
@@ -532,11 +535,65 @@ def do_check_sensor_mask():
 
 def do_test():
     print('TEST')
+
+    # dir_sources = '/mnt/c/DATA_LUIS/OCTACWORK'
+    # dir_bad = '/mnt/c/DATA_LUIS/OCTACWORK/BAD'
+    # dir_check = '/mnt/c/DATA_LUIS/OCTACWORK/CHECK'
+
+    dir_sources = '/store/COP2-OC-TAC/arc/sources/20240421'
+    dir_bad = '/store/COP2-OC-TAC/arc/bad'
+    dir_check = '/store/COP2-OC-TAC/arc/CHECK'
+
+    import zipfile
     from netCDF4 import Dataset
-    file = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/X2022130-chl-med-hr.nc'
-    dataset = Dataset(file, 'r')
-    smask = np.array(dataset.variables['SENSORMASK'][:])
-    print(smask.min(), smask.max())
+    for name in os.listdir(dir_sources):
+        if not name.endswith('.zip'):
+            continue
+        # if not name=='S3B_OL_2_WFR____20240421T000327_20240421T000627_20240421T015954_0180_092_116_1800_MAR_O_NR_003.SEN3':
+        #     continue
+
+        #name = 'S3A_OL_2_WFR____20240421T141019_20240421T141319_20240421T160835_0179_111_267_1800_MAR_O_NR_003.SEN3.zip'
+        file = os.path.join(dir_sources,name)
+        file_bad = os.path.join(dir_bad,name)
+
+        zip_ref = zipfile.ZipFile(file, 'r')
+        name_ref = f'{name[:-4]}/'
+        nfiles = 0
+        for name_here in zip_ref.namelist():
+            if name_here.startswith(name_ref):
+                nfiles = nfiles + 1
+        if nfiles<33:
+            print(name,'->',nfiles)
+            os.rename(file,file_bad)
+        folder_out = os.path.join(dir_check,name[:-4])
+        if not os.path.exists(folder_out):
+            zip_ref.extractall(dir_check)
+        zip_ref.close()
+        valid = True
+        for name_out in os.listdir(folder_out):
+            if not name_out.endswith('nc'):
+                continue
+            file_nc = os.path.join(folder_out,name_out)
+            #print(file_nc)
+            try:
+                dataset = Dataset(file_nc,'r')
+                dataset.close()
+            except:
+                valid = False
+                break
+        if not valid:
+            print(f'Folder out: {folder_out} is not valid')
+
+
+
+
+
+
+    # from netCDF4 import Dataset
+    # file = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/X2022130-chl-med-hr.nc'
+    # dataset = Dataset(file, 'r')
+    # smask = np.array(dataset.variables['SENSORMASK'][:])
+    # print(smask.min(), smask.max())
 
     import pandas as pd
     from datetime import datetime as dt
@@ -646,6 +703,7 @@ def do_test():
     #     f1.write(line)
     # f1.close()
 
+    return True
 
 def do_extract_csv():
     import pandas as pd
