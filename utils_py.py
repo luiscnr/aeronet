@@ -34,8 +34,8 @@ args = parser.parse_args()
 
 
 def main():
-    if do_test():
-        return
+    # if do_test():
+    #     return
 
     print('[INFO] Started')
     if args.mode == 'concatdf':
@@ -194,7 +194,36 @@ def main():
         do_doors_certo_msi_csv()
 
     if args.mode == 'aqua_check':
-        do_aqua_check()
+        download_doors_http()
+        #do_aqua_check()
+
+def download_doors_http():
+    import requests
+
+    url = 'https://rsg.pml.ac.uk/shared_files/liat/DOORS_v2_additional_Danube/'
+    response = requests.get(url, params={})
+    dir_out = args.output
+    for line in response.text.split('\n'):
+        iini = line.find('a href="')
+        ifin = line.find('"',iini+8)
+        if iini>0:
+            name_file = line[iini+8:ifin]
+            if not name_file.startswith('CERTO'):
+                continue
+            print(name_file)
+            url_file = f'{url}{name_file}'
+            date_here = dt.strptime(name_file.split('_')[2],'%Y%m%d')
+            path_year = os.path.join(dir_out,date_here.strftime('%Y'))
+            if not os.path.isdir(path_year):
+                os.mkdir(path_year)
+            path_jday = os.path.join(path_year,date_here.strftime('%j'))
+            if not os.path.isdir(path_jday):
+                os.mkdir(path_jday)
+            file_out = os.path.join(path_jday, name_file)
+            if not os.path.exists(file_out):
+                r = requests.get(url_file, allow_redirects=True)
+                open(file_out, 'wb').write(r.content)
+
 
 
 def do_aqua_check():
