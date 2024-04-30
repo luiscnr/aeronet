@@ -181,7 +181,8 @@ def main():
         do_comparison_cmems_certo()
 
     if args.mode == 'extract_csv':
-        do_extract_csv()
+        # do_extract_csv()
+        do_extract_csv_from_extracts()
 
     if args.mode == 'checksensormask':
         # do_check_sensor_mask()
@@ -195,7 +196,8 @@ def main():
 
     if args.mode == 'aqua_check':
         download_doors_http()
-        #do_aqua_check()
+        # do_aqua_check()
+
 
 def download_doors_http():
     import requests
@@ -205,25 +207,24 @@ def download_doors_http():
     dir_out = args.output
     for line in response.text.split('\n'):
         iini = line.find('a href="')
-        ifin = line.find('"',iini+8)
-        if iini>0:
-            name_file = line[iini+8:ifin]
+        ifin = line.find('"', iini + 8)
+        if iini > 0:
+            name_file = line[iini + 8:ifin]
             if not name_file.startswith('CERTO'):
                 continue
             print(name_file)
             url_file = f'{url}{name_file}'
-            date_here = dt.strptime(name_file.split('_')[2],'%Y%m%d')
-            path_year = os.path.join(dir_out,date_here.strftime('%Y'))
+            date_here = dt.strptime(name_file.split('_')[2], '%Y%m%d')
+            path_year = os.path.join(dir_out, date_here.strftime('%Y'))
             if not os.path.isdir(path_year):
                 os.mkdir(path_year)
-            path_jday = os.path.join(path_year,date_here.strftime('%j'))
+            path_jday = os.path.join(path_year, date_here.strftime('%j'))
             if not os.path.isdir(path_jday):
                 os.mkdir(path_jday)
             file_out = os.path.join(path_jday, name_file)
             if not os.path.exists(file_out):
                 r = requests.get(url_file, allow_redirects=True)
                 open(file_out, 'wb').write(r.content)
-
 
 
 def do_aqua_check():
@@ -565,59 +566,98 @@ def do_check_sensor_mask():
 def do_test():
     print('TEST')
 
+    # dir_extracts = '/mnt/c/DATA_LUIS/DOORS_WORK/extracts/certo_msi_danube'
+    from netCDF4 import Dataset
+    from datetime import datetime as dt
+    # for name in os.listdir(dir_extracts):
+    #     file_extract = os.path.join(dir_extracts,name)
+    #     dataset = Dataset(file_extract)
+    #     sat_time =float(dataset.variables['satellite_time'][0])
+    #     print(dt.utcfromtimestamp(sat_time))
+    #     dataset.close()
+
+    dir_mdb = '/mnt/c/DATA_LUIS/DOORS_WORK/MDBs'
+    for name in os.listdir(dir_mdb):
+        file_nc = os.path.join(dir_mdb, name)
+        file_out = os.path.join(dir_mdb, f'{name[:-3]}.csv')
+        print(file_out)
+        fout = open(file_out, 'w')
+        fout.write('SatelliteId;InsituId;SatelliteTimeStamp;InsituTimeStamp;SatelliteTime;InsituTime;TimeDifference')
+
+        dataset = Dataset(file_nc)
+        sat_time = np.array(dataset.variables['satellite_time'])
+        ins_time = np.array(dataset.variables['insitu_time'])
+        # fill_value = dataset.variables['insitu_time']._FillValue
+        fill_value = 9.969209968386869e+36
+        time_diff = np.array(dataset.variables['time_difference'])
+        for satellite_id in range(sat_time.shape[0]):
+            sat_stamp = sat_time[satellite_id]
+            for insitu_id in range(50):
+                ins_stamp = ins_time[satellite_id][insitu_id]
+                if ins_stamp != fill_value:
+                    sat_time_stamp = dt.utcfromtimestamp(sat_stamp)
+                    ins_time_stamp = dt.utcfromtimestamp(ins_stamp)
+                    time_diff_here = time_diff[satellite_id][insitu_id]
+                    time_diff_computed = abs((sat_time_stamp - ins_time_stamp).total_seconds())
+                    time_diff_computed_2 = abs(sat_stamp - ins_stamp)
+                    # print(sat_time_stamp,ins_time_stamp,time_diff_here,time_diff_computed,time_diff_computed_2)
+                    line = f'{satellite_id};{insitu_id};{sat_stamp};{ins_stamp};{sat_time_stamp.strftime("%Y-%m-%d %H:%M:%S")};{ins_time_stamp.strftime("%Y-%m-%d %H:%M:%S")};{time_diff_here}'
+                    tal = abs(time_diff_here - time_diff_computed)
+                    cual = abs(time_diff_here - time_diff_computed_2)
+                    print(tal, cual)
+                    fout.write('\n')
+                    fout.write(line)
+        dataset.close()
+        fout.close()
+
     # dir_sources = '/mnt/c/DATA_LUIS/OCTACWORK'
     # dir_bad = '/mnt/c/DATA_LUIS/OCTACWORK/BAD'
     # dir_check = '/mnt/c/DATA_LUIS/OCTACWORK/CHECK'
 
-    dir_sources = '/store/COP2-OC-TAC/arc/sources/20240421'
-    dir_bad = '/store/COP2-OC-TAC/arc/bad'
-    dir_check = '/store/COP2-OC-TAC/arc/CHECK'
-
-    import zipfile
-    from netCDF4 import Dataset
-    for name in os.listdir(dir_sources):
-        if not name.endswith('.zip'):
-            continue
-        # if not name=='S3B_OL_2_WFR____20240421T000327_20240421T000627_20240421T015954_0180_092_116_1800_MAR_O_NR_003.SEN3':
-        #     continue
-
-        #name = 'S3A_OL_2_WFR____20240421T141019_20240421T141319_20240421T160835_0179_111_267_1800_MAR_O_NR_003.SEN3.zip'
-        file = os.path.join(dir_sources,name)
-        file_bad = os.path.join(dir_bad,name)
-
-        zip_ref = zipfile.ZipFile(file, 'r')
-        name_ref = f'{name[:-4]}/'
-        nfiles = 0
-        for name_here in zip_ref.namelist():
-            if name_here.startswith(name_ref):
-                nfiles = nfiles + 1
-        if nfiles<33:
-            print(name,'->',nfiles)
-            os.rename(file,file_bad)
-        folder_out = os.path.join(dir_check,name[:-4])
-        if not os.path.exists(folder_out):
-            zip_ref.extractall(dir_check)
-        zip_ref.close()
-        valid = True
-        for name_out in os.listdir(folder_out):
-            if not name_out.endswith('nc'):
-                continue
-            file_nc = os.path.join(folder_out,name_out)
-            #print(file_nc)
-            try:
-                dataset = Dataset(file_nc,'r')
-                dataset.close()
-            except:
-                valid = False
-                break
-        if not valid:
-            print(f'Folder out: {folder_out} is not valid')
-            os.rename(file, file_bad)
-
-
-
-
-
+    # dir_sources = '/store/COP2-OC-TAC/arc/sources/20240421'
+    # dir_bad = '/store/COP2-OC-TAC/arc/bad'
+    # dir_check = '/store/COP2-OC-TAC/arc/CHECK'
+    #
+    # import zipfile
+    # from netCDF4 import Dataset
+    # for name in os.listdir(dir_sources):
+    #     if not name.endswith('.zip'):
+    #         continue
+    #     # if not name=='S3B_OL_2_WFR____20240421T000327_20240421T000627_20240421T015954_0180_092_116_1800_MAR_O_NR_003.SEN3':
+    #     #     continue
+    #
+    #     #name = 'S3A_OL_2_WFR____20240421T141019_20240421T141319_20240421T160835_0179_111_267_1800_MAR_O_NR_003.SEN3.zip'
+    #     file = os.path.join(dir_sources,name)
+    #     file_bad = os.path.join(dir_bad,name)
+    #
+    #     zip_ref = zipfile.ZipFile(file, 'r')
+    #     name_ref = f'{name[:-4]}/'
+    #     nfiles = 0
+    #     for name_here in zip_ref.namelist():
+    #         if name_here.startswith(name_ref):
+    #             nfiles = nfiles + 1
+    #     if nfiles<33:
+    #         print(name,'->',nfiles)
+    #         os.rename(file,file_bad)
+    #     folder_out = os.path.join(dir_check,name[:-4])
+    #     if not os.path.exists(folder_out):
+    #         zip_ref.extractall(dir_check)
+    #     zip_ref.close()
+    #     valid = True
+    #     for name_out in os.listdir(folder_out):
+    #         if not name_out.endswith('nc'):
+    #             continue
+    #         file_nc = os.path.join(folder_out,name_out)
+    #         #print(file_nc)
+    #         try:
+    #             dataset = Dataset(file_nc,'r')
+    #             dataset.close()
+    #         except:
+    #             valid = False
+    #             break
+    #     if not valid:
+    #         print(f'Folder out: {folder_out} is not valid')
+    #         os.rename(file, file_bad)
 
     # from netCDF4 import Dataset
     # file = '/mnt/c/DATA_LUIS/OCTAC_WORK/CHECK_SENSOR_MASK/X2022130-chl-med-hr.nc'
@@ -734,6 +774,67 @@ def do_test():
     # f1.close()
 
     return True
+
+
+def do_extract_csv_from_extracts():
+    import pandas as pd
+    from netCDF4 import Dataset
+    file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_2/data_for_extraction_v6_out.csv'
+    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_2/data_for_extraction_v6_3x3.csv'
+    dir_extracts = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_2/extracts_orig_cciV6'
+
+    df = pd.read_csv(file_csv,sep=';')
+    lines_out = ['CCIV6_RRS412;CCIV6_RRS443;CCIV6_RRS490;CCIV6_RRS510;CCIV6_RRS560;CCIV6_RRS665']
+    for index, row in df.iterrows():
+        line_out = None
+        #print(row)
+        extract = row['Extract']
+
+        if not isinstance(extract,str):
+            lines_out.append('-999.0;-999.0;-999.0;-999.0;-999.0;-999.0')
+            continue
+        file_extract = os.path.join(dir_extracts, f'extract_{extract}')
+        dataset = Dataset(file_extract)
+        rrs = dataset.variables['satellite_Rrs']
+        for iband in range(rrs.shape[1]):
+            # 1x1
+            # rrs_val_c = rrs[0, iband, 12, 12]
+            # if np.ma.is_masked(rrs_val_c):
+            #     rrs_val = -999.0
+            # else:
+            #     rrs_val = rrs_val_c
+            # 3x3
+            rrs_here = rrs[0,iband,11:14,11:14]
+
+            rrs_here = rrs_here[~rrs_here.mask]
+            print(rrs_here,len(rrs_here))
+            if len(rrs_here)>=1:
+                rrs_val = np.mean(rrs_here)
+            else:
+                rrs_val = -999.0
+            if line_out is None:
+                line_out = f'{rrs_val}'
+            else:
+                line_out = f'{line_out};{rrs_val}'
+        lines_out.append(line_out)
+        dataset.close()
+
+    print('[INFO] Writting...')
+    fr = open(file_csv, 'r')
+    fw = open(file_out, 'w')
+    index = 0
+    for line in fr:
+        line_out = lines_out[index]
+        line_out = f'{line.strip()};{line_out}'
+        #print(line_out)
+        fw.write(line_out)
+        fw.write('\n')
+        index = index + 1
+    fr.close()
+    fw.close()
+
+    print(f'[INFO] Completed')
+
 
 def do_extract_csv():
     import pandas as pd
@@ -962,9 +1063,19 @@ def do_comparison_cmems_certo():
     import pandas as pd
     from netCDF4 import Dataset
     import numpy as np
+    from datetime import datetime as dt
     do_grid = False
+    do_global = False
+    do_add_param = False
+    do_prepare_plot = False
     if args.input == 'GRID':
         do_grid = True
+    if args.input.startswith('GLOBAL%'):
+        do_global = True
+    if args.input == 'PREPAREPLOT':
+        do_prepare_plot = True
+    if args.input == 'ADDPARAM':
+        do_add_param = True
 
     if do_grid:
         file_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/Grid_CMEMS_OLCI_BS_OLD.csv'
@@ -993,7 +1104,7 @@ def do_comparison_cmems_certo():
         fCmems.write(line)
 
         all_dist = []
-        #import geopy.distance
+        # import geopy.distance
 
         for idx in range(len(lat_grid)):
             index = idx + 1
@@ -1008,8 +1119,8 @@ def do_comparison_cmems_certo():
 
             coord_1 = (lat_here, lon_here)
             coord_2 = (lat_altro, lon_altro)
-            #dist = geopy.distance.geodesic(coord_1, coord_2).m
-            dist = abs(lat_here-lon_here)
+            # dist = geopy.distance.geodesic(coord_1, coord_2).m
+            dist = abs(lat_here - lon_here)
 
             if dist < 160.0:
                 line_certo = f'{index};{y};{x};{lat_here};{lon_here}'
@@ -1039,6 +1150,205 @@ def do_comparison_cmems_certo():
         dfcmems.to_csv(file_end, sep=';')
         return
 
+    if do_global:
+        print('[INFO] STARTED  GETTIG GLOBAL POINTS...')
+        from datetime import datetime as dt
+        # getting global points
+        dir_out_base = args.output
+        param = args.input.split('%')[1]
+        param_name = param
+        if param.startswith('RRS'):
+            # params_rrs_cmems=param: RRS_400,RRS_412_5,RRS_442_5,RRS_490,RRS_510,RRS_560,RRS_620,RRS_665,RRS_673_75,RRS_681_25,RRS_708_75,RRS_753_75,RRS_778_75,RRS_865,RRS_885,RRS_1020
+            rrs_conversion = {
+                'RRS_400': 'RRS_400',
+                'RRS_412_5': 'RRS_412',
+                'RRS_442_5': 'RRS_443',
+                'RRS_490': 'RRS_490',
+                'RRS_510': 'RRS_510',
+                'RRS_560': 'RRS_560',
+                'RRS_620': 'RRS_620',
+                'RRS_665': 'RRS_665',
+                'RRS_673_75': 'RRS_674',
+                'RRS_681_25': 'RRS_681',
+                'RRS_708_75': 'RRS_709',
+                'RRS_753_75': 'RRS_754',
+                'RRS_778_75': 'RRS_779',
+                'RRS_865': 'RRS_865',
+                'RRS_885': 'RRS_885',
+                'RRS_1020': 'RRS_1020',
+            }
+            param_rrs_cmems = param
+            param_rrs_certo = rrs_conversion[param]
+            param_name = 'RRS'
+
+        dir_comparison = os.path.join(dir_out_base, f'COMPARISON_{param_name}')
+
+        file_out = os.path.join(dir_out_base, f'{param.lower()}_points.csv')
+
+        start_date = dt.strptime(args.start_date, '%Y-%m-%d')
+        end_date = dt.strptime(args.end_date, '%Y-%m-%d')
+
+        colCMEMS = 'CMEMSVal'
+        colCERTO = 'CERTOVal'
+        if param_name == 'RRS':
+            colCMEMS = f'{colCMEMS}_{param_rrs_cmems}'
+            colCERTO = f'{colCERTO}_{param_rrs_certo}'
+
+        first_line = f'Date;Index;CMEMSVal;CERTOVal'
+        f1 = open(file_out, 'w')
+        f1.write(first_line)
+        nfiles = 0
+
+        date_here = start_date
+        while date_here <= end_date:
+            year = date_here.strftime('%Y')
+            jday = date_here.strftime('%j')
+            file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
+            date_here_str = date_here.strftime('%Y-%m-%d')
+
+            if os.path.exists(file_c):
+                print(f'[INFO]Date: {date_here}->{file_c}')
+                nfiles = nfiles + 1
+                points_here = pd.read_csv(file_c, sep=';')
+                for index, row in points_here.iterrows():
+                    cmems_val = row[colCMEMS]
+                    certo_val = row[colCERTO]
+                    index_here = row['Index']
+                    line = f'{date_here_str};{index_here};{cmems_val};{certo_val}'
+                    f1.write('\n')
+                    f1.write(line)
+                    # if (param == 'CHL' or param == 'KD490') and (multi_val < 0 or olci_val < 0):
+                    #     continue
+                    # if (param == 'CHL' or param == 'KD490') and (olci_val <= 0):
+                    #     continue
+            date_here = date_here + timedelta(hours=24)  # 10 days
+            # if date_here.year==2019 and date_here.month==10 and date_here.day==23:
+            #     date_here = date_here + timedelta(hours=24)
+
+        return
+
+    if do_prepare_plot:
+        from datetime import datetime as dt
+        dir_out_base = args.output
+        for name in os.listdir(dir_out_base):
+            if not name.endswith('_points.csv'):
+                continue
+            fname = os.path.join(dir_out_base, name)
+            print('------------------------>', fname)
+            df = pd.read_csv(fname, sep=';')
+            fout = os.path.join(dir_out_base, f'{name[:-4]}_valid.csv')
+            f1 = open(fout, 'w')
+            f1.write('Date;Index;CMEMSVal;CERTOVal')
+            for index, row in df.iterrows():
+                date_here = row['Date']
+                index_here = str(row['Index'])
+                valCMEMS = row['CMEMSVal']
+                valCERTO = row['CERTOVal']
+                if np.isnan(valCMEMS):
+                    continue
+                if np.isnan(valCERTO):
+                    continue
+                if valCMEMS < (-1):
+                    continue
+                if valCERTO < (-1):
+                    continue
+                f1.write('\n')
+                line = f'{date_here};{index_here};{valCMEMS};{valCERTO}'
+                f1.write(line)
+            f1.close()
+
+        indices = {}
+        nfiles = 0
+        for name in os.listdir(dir_out_base):
+            if not name.endswith('_valid.csv'):
+                continue
+            nfiles = nfiles + 1
+            fname = os.path.join(dir_out_base, name)
+            print('------------------------>', fname)
+            df = pd.read_csv(fname, sep=';')
+            date_ref_ym = ''
+            for index, row in df.iterrows():
+                date_here = row['Date']
+                index_here = str(row['Index'])
+                date_here_ym = dt.strptime(date_here, '%Y-%m-%d').strftime('%Y%m')
+                di = f'{date_here}_{index_here}'
+                if date_here_ym != date_ref_ym:
+                    print(date_here_ym)
+                    date_ref_ym = date_here_ym
+
+                if di in indices:
+                    indices[di] = indices[di] + 1
+                else:
+                    indices[di] = 1
+            print('------------------------')
+
+        for name in os.listdir(dir_out_base):
+            if not name.endswith('_valid.csv'):
+                continue
+            fname = os.path.join(dir_out_base, name)
+            fout = os.path.join(dir_out_base, f'{name[:-4]}_common.csv')
+            f1 = open(fout, 'w')
+            f1.write('Date;Index;CMEMSVal;CERTOVal')
+            df = pd.read_csv(fname, sep=';')
+            print('------------------------>', fout)
+            for index, row in df.iterrows():
+                date_here = row['Date']
+                index_here = str(row['Index'])
+                date_here_ym = dt.strptime(date_here, '%Y-%m-%d').strftime('%Y%m')
+                di = f'{date_here}_{index_here}'
+                if date_here_ym != date_ref_ym:
+                    print(date_here_ym)
+                    date_ref_ym = date_here_ym
+                if indices[di] == nfiles:
+                    f1.write('\n')
+                    valMulti = row['CMEMSVal']
+                    valOlci = row['CERTOVal']
+                    line = f'{date_here};{index_here};{valMulti};{valOlci}'
+                    f1.write(line)
+            f1.close()
+
+        return
+
+    if do_add_param:
+        dir_comparison = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/COMPARISON_RRS'
+        dir_base = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/RRS_POINTS/'
+        file_ref = os.path.join(dir_base, 'rrs_400_points_valid_common.csv')
+        dir_out = os.path.join(dir_base, 'tmp')
+        if not os.path.isdir(dir_out):
+            os.mkdir(dir_out)
+        ref_wce = 'points_valid_common.csv'
+        df = pd.read_csv(file_ref, ';')
+        nvalues = len(df.index)
+        output = np.zeros((nvalues,))
+        ioutput = 0
+        dates = pd.unique(df['Date'][:])
+        for date in dates:
+            date_here = dt.strptime(date, '%Y-%m-%d')
+            indices = np.array(df.loc[df['Date'] == date, 'Index'])
+            file_comparison = os.path.join(dir_comparison, f'Comparison_RRS_{date_here.strftime("%Y%j")}.csv')
+            dfcomparison = pd.read_csv(file_comparison, sep=';')
+            if len(indices) < len(dfcomparison.index):
+                values = []
+                for index in indices:
+                    values.append(dfcomparison.loc[dfcomparison['Index'] == index, 'blended_dominant_owt'])
+                values = np.array(values)
+            else:
+                values = np.array(dfcomparison.loc[dfcomparison['Index'] == indices, 'blended_dominant_owt'])
+            output[ioutput:ioutput + len(values)] = values.flatten()[:]
+            ioutput = ioutput + len(values)
+            print(date, ioutput)
+
+        for name in os.listdir(dir_base):
+            if name.find(ref_wce) > 0:
+                file_in = os.path.join(dir_base, name)
+                file_out = os.path.join(dir_out, name)
+                print('->', name)
+                df_in = pd.read_csv(file_in, ';')
+                df_out = df_in.assign(blended_dominat_owt=output)
+                df_out.to_csv(file_out, sep=';')
+
+        return
+
     ##comparison
     print('[INFO] STARTED  COMPARISON...')
     from datetime import datetime as dt
@@ -1066,6 +1376,15 @@ def do_comparison_cmems_certo():
         wl_certo = ['400', '412', '443', '490', '510', '560', '620', '665', '674', '681', '709', '754', '779', '865',
                     '885', '1020']
 
+    if args.input == 'ALL':
+        params = ['ALL']
+        all_cmems = ['chl', 'chlnn', 'chloc4me', 'kd490', 't865', 'tsmnn']
+        all_certo = ['blended_chla', 'blended_chla_from_predominant_owt', 'blended_chla_top_2_reweighted',
+                     'blended_chla_top_2_weighted', 'blended_chla_top_3_reweighted', 'blended_chla_top_3_weighted',
+                     'blended_tsm', 'blended_tsm_top_2_reweighted', 'blended_tsm_top_2_weighted',
+                     'blended_tsm_top_3_reweighted', 'blended_tsm_top_3_weighted',
+                     'chlor_ChlGdal', 'chlor_ChlGdal_Capped', 'chlor_ChlGilSA2_NaN', 'chlor_ChlGit',
+                     'chlor_ChlGit_Capped', 'chlor_oc3', 'chlor_oc4Med', 'chlor_oc5', 'chlor_oc5ci', 'chlor_oci2']
 
     dir_outs = []
     for param in params:
@@ -1075,7 +1394,7 @@ def do_comparison_cmems_certo():
         dir_outs.append(dir_out)
     file_grid = os.path.join(dir_out_base, f'Grid_OLCI_BS.csv')
 
-    optical_water_types = ['blended_dominant_owt','owt_dominant_OWT']
+    optical_water_types = ['blended_dominant_owt', 'owt_dominant_OWT']
 
     if args.input == 'RRS':
         col_names_cmems = []
@@ -1098,6 +1417,26 @@ def do_comparison_cmems_certo():
         dfgrid.to_csv(file_new_grid, sep=';')
         file_grid = file_new_grid
 
+    if args.input == 'ALL':
+        col_names_cmems = []
+        col_names_certo = []
+        file_new_grid = os.path.join(dir_out_base, f'Grid_OLCI_BS_All.csv')
+        dfgrid = pd.read_csv(file_grid, sep=';')
+        for p in all_cmems:
+            new_col = f'CMEMS_{p}'
+            col_names_cmems.append(new_col)
+            dfgrid[new_col] = -999.0
+        for p in all_certo:
+            new_col = f'CERTO_{p}'
+            col_names_certo.append(new_col)
+            dfgrid[new_col] = -999.0
+        for owt in optical_water_types:
+            dfgrid[owt] = -999.0
+        dfgrid = dfgrid.drop('CMEMSVal', axis=1)
+        dfgrid = dfgrid.drop('CERTOVal', axis=1)
+        dfgrid.to_csv(file_new_grid, sep=';')
+        file_grid = file_new_grid
+
     start_date = dt.strptime(args.start_date, '%Y-%m-%d')
     end_date = dt.strptime(args.end_date, '%Y-%m-%d')
     date_here = start_date
@@ -1108,7 +1447,7 @@ def do_comparison_cmems_certo():
             print(f'[INFO] Worknig for date: {date_here}...')
 
         for param, dir_out in zip(params, dir_outs):
-            #print(param, dir_out)
+            # print(param, dir_out)
             # PARAMS, TO DEFINE FILE NAMES
             param_cmems = param
             param_certo = param
@@ -1128,7 +1467,7 @@ def do_comparison_cmems_certo():
                 if param_cmems == 'RRS':
                     files_cmems = []
                     name_certo = f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc'
-                    file_certo = os.path.join(dir_certo,name_certo)
+                    file_certo = os.path.join(dir_certo, name_certo)
                     do_proc = True
                     for wlc in wl_cmems:
                         file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
@@ -1142,29 +1481,75 @@ def do_comparison_cmems_certo():
                         try_download = False
                         if not os.path.exists(file_certo):
                             try_download = True
-                        if os.path.exists(file_certo) and os.stat(file_certo).st_size==0:
+                        if os.path.exists(file_certo) and os.stat(file_certo).st_size == 0:
                             os.remove(file_certo)
                             try_download = True
                         if try_download:
                             try:
-                                dir_certo_year = os.path.join(dir_certo_orig,year)
+                                dir_certo_year = os.path.join(dir_certo_orig, year)
                                 if not os.path.isdir(dir_certo_year):
                                     os.mkdir(dir_certo_year)
-                                dir_certo_jday = os.path.join(dir_certo_year,jday)
+                                dir_certo_jday = os.path.join(dir_certo_year, jday)
                                 if not os.path.isdir(dir_certo_jday):
                                     os.mkdir(dir_certo_jday)
-                                download_olci_source(name_certo,file_certo)
+                                download_olci_source(name_certo, file_certo)
                             except:
                                 pass
-                        do_proc = os.path.exists(file_certo) and os.stat(file_certo).st_size>0
+                        do_proc = os.path.exists(file_certo) and os.stat(file_certo).st_size > 0
                         if do_proc:
                             file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
                             if os.path.exists(file_out):
                                 print(f'[WARNING] File: {file_out} already exists. Skipping...')
                             else:
-                                make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems,wl_certo, col_names_cmems, col_names_certo,optical_water_types)
+                                make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems,
+                                                          wl_certo, col_names_cmems, col_names_certo,
+                                                          optical_water_types)
                         else:
                             print(f'[WARNING] File CERTO {file_certo} is not available. Skipping....')
+
+                if param_cmems == 'ALL':
+                    files_cmems = []
+                    name_certo = f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc'
+                    file_certo = os.path.join(dir_certo, name_certo)
+                    do_proc = True
+                    for p in all_cmems:
+                        file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-{p}-bs-fr.nc')
+                        if os.path.exists(file_cmems):
+                            files_cmems.append(file_cmems)
+                        else:
+                            print(f'[WARNING] File CMEMS {file_cmems} does not exist...')
+                            do_proc = False
+                            break
+                    if do_proc:
+                        try_download = False
+                        if not os.path.exists(file_certo):
+                            try_download = True
+                        if os.path.exists(file_certo) and os.stat(file_certo).st_size == 0:
+                            os.remove(file_certo)
+                            try_download = True
+                        if try_download:
+                            try:
+                                dir_certo_year = os.path.join(dir_certo_orig, year)
+                                if not os.path.isdir(dir_certo_year):
+                                    os.mkdir(dir_certo_year)
+                                dir_certo_jday = os.path.join(dir_certo_year, jday)
+                                if not os.path.isdir(dir_certo_jday):
+                                    os.mkdir(dir_certo_jday)
+                                download_olci_source(name_certo, file_certo)
+                            except:
+                                pass
+                        do_proc = os.path.exists(file_certo) and os.stat(file_certo).st_size > 0
+                        if do_proc:
+                            file_out = os.path.join(dir_out, f'Comparison_{param}_{year}{jday}.csv')
+                            if os.path.exists(file_out):
+                                print(f'[WARNING] File: {file_out} already exists. Skipping...')
+                            else:
+                                make_comparison_all_impl(file_grid, files_cmems, file_certo, file_out, all_cmems,
+                                                         all_certo, col_names_cmems, col_names_certo,
+                                                         optical_water_types)
+                        else:
+                            print(f'[WARNING] File CERTO {file_certo} is not available. Skipping....')
+
             else:
                 if not os.path.exists(dir_cmems):
                     print(f'[WARNING] CMEMS path {dir_cmems} does not exits. Skipping...')
@@ -1172,7 +1557,8 @@ def do_comparison_cmems_certo():
                     print(f'[WARNING] CERTO path {dir_certo} does not exits. Skipping...')
         date_here = date_here + timedelta(hours=nhours)
 
-def download_olci_source(namefile,file_out):
+
+def download_olci_source(namefile, file_out):
     ##DONWLOAD
     cmd = f'wget --user=rsg_dump --password=yohlooHohw2Pa9ohv1Chi ftp://ftp.rsg.pml.ac.uk/DOORS_matchups/OLCI/{namefile} -O {file_out}'
     if args.verbose:
@@ -1185,6 +1571,7 @@ def download_olci_source(namefile,file_out):
     except subprocess.TimeoutExpired:
         proc.kill()
         outs, errs = proc.communicate()
+
 
 def do_comparison_multi_olci():
     import pandas as pd
@@ -2050,8 +2437,8 @@ def make_comparison_band_shifting_impl(file_grid, files_multi, files_olci, file_
     grid_valid.to_csv(file_out, sep=';')
 
 
-def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems, wl_certo, col_names_cmems,col_names_certo,optical_water_types):
-
+def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_cmems, wl_certo, col_names_cmems,
+                              col_names_certo, optical_water_types):
     from netCDF4 import Dataset
     grid = pd.read_csv(file_grid, sep=';')
 
@@ -2074,7 +2461,7 @@ def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_c
     if args.verbose:
         print(f'[INFO] Creating CERTO array...')
     dataset_certo = Dataset(file_certo)
-    for idx,wl in enumerate(wl_certo):
+    for idx, wl in enumerate(wl_certo):
         variable_certo = f'Rw{wl}_rep'
         array_c = np.array(dataset_certo.variables[variable_certo])
         if idx == 0:
@@ -2086,19 +2473,17 @@ def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_c
         array_certo[idx, :, :] = array_c[0, :, :]
 
     if len(optical_water_types) > 0:
-        for idx,owt in enumerate(optical_water_types):
+        for idx, owt in enumerate(optical_water_types):
             array_c = np.array(dataset_certo.variables[owt])
-            array_owt[idx,:,:] = array_c[0,:,:]
-
+            array_owt[idx, :, :] = array_c[0, :, :]
 
     dataset_certo.close()
 
-
-
     nvalid = 0
-    required_valid_pixels = num_m*9
+    required_valid_pixels = num_m * 9
     if args.verbose:
-        print(f'[INFO] Number of bands: {num_m}. Valid pixels per band: 9. Required valid pixels: {required_valid_pixels}')
+        print(
+            f'[INFO] Number of bands: {num_m}. Valid pixels per band: 9. Required valid pixels: {required_valid_pixels}')
         print(f'[INFO] Checking grid values...')
     for index, row in grid.iterrows():
         ycmems = int(row['YCMEMS'])
@@ -2111,14 +2496,14 @@ def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_c
         array_certo_good = array_certo_here[array_certo_here != fill_value_certo]
         valid = 0
 
-        if len(array_certo_good)>=required_valid_pixels and len(array_cmems_good)>=required_valid_pixels:
+        if len(array_certo_good) >= required_valid_pixels and len(array_cmems_good) >= required_valid_pixels:
             nvalid = nvalid + 1
             valid = 1
 
         grid.loc[index, 'Valid'] = valid
         if valid == 1:
-            spectra_cmems = np.mean(array_cmems_here,axis=(1,2))
-            spectra_certo = np.mean(array_certo_here,axis=(1,2))
+            spectra_cmems = np.mean(array_cmems_here, axis=(1, 2))
+            spectra_certo = np.mean(array_certo_here, axis=(1, 2))
             spectra_certo = spectra_certo / np.pi
             grid.loc[index, col_names_cmems] = spectra_cmems
             grid.loc[index, col_names_certo] = spectra_certo
@@ -2127,13 +2512,13 @@ def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_c
 
                 for iowt in range(len(optical_water_types)):
                     array_owt_here = array_owt[iowt, ycerto - 1:ycerto + 2, xcerto - 1:xcerto + 2]
-                    array_owt_here = array_owt_here[array_owt_here<18]
-                    if len(array_owt_here)==0:
-                        res_owt[iowt]=-1
+                    array_owt_here = array_owt_here[array_owt_here < 18]
+                    if len(array_owt_here) == 0:
+                        res_owt[iowt] = -1
                     else:
                         res_owt[iowt] = np.argmax(np.bincount(array_owt_here.flatten().astype(np.int32)))
-                grid.loc[index,optical_water_types] = res_owt
-    if nvalid>0:
+                grid.loc[index, optical_water_types] = res_owt
+    if nvalid > 0:
         grid_valid = grid[grid['Valid'] == 1]
         grid_valid.to_csv(file_out, sep=';')
         if args.verbose:
@@ -2141,6 +2526,107 @@ def make_comparison_band_impl(file_grid, files_cmems, file_certo, file_out, wl_c
     else:
         print(f'[WARNING] Valid pixels were not found')
 
+
+def make_comparison_all_impl(file_grid, files_cmems, file_certo, file_out, all_cmems, all_certo, col_names_cmems,
+                             col_names_certo, optical_water_types):
+    from netCDF4 import Dataset
+    grid = pd.read_csv(file_grid, sep=';')
+
+    if args.verbose:
+        print(f'[INFO] Creating CMEMS array...')
+    num_m = len(files_cmems)
+    for idx in range(num_m):
+        file_cmems = files_cmems[idx]
+        p = all_cmems[idx]
+        dataset_cmems = Dataset(file_cmems)
+        variable_cmems = f'{p.upper()}'
+        array_c = np.array(dataset_cmems.variables[variable_cmems])
+        if idx == 0:
+            fill_value_cmems = dataset_cmems.variables[variable_cmems]._FillValue
+            s = array_c.shape
+            array_cmems = np.zeros((num_m, s[1], s[2]))
+        array_cmems[idx, :, :] = array_c[0, :, :]
+        dataset_cmems.close()
+
+    num_c = len(all_certo)
+    if args.verbose:
+        print(f'[INFO] Creating CERTO array...')
+    dataset_certo = Dataset(file_certo)
+    for idx, p in enumerate(all_certo):
+        variable_certo = f'{p}'
+        array_c = np.array(dataset_certo.variables[variable_certo])
+        if idx == 0:
+            fill_value_certo = dataset_certo.variables[variable_certo]._FillValue
+            s = array_c.shape
+            array_certo = np.zeros((num_c, s[1], s[2]))
+            if len(optical_water_types) > 0:
+                array_owt = np.zeros((len(optical_water_types), s[1], s[2]))
+        array_certo[idx, :, :] = array_c[0, :, :]
+
+    if len(optical_water_types) > 0:
+        for idx, owt in enumerate(optical_water_types):
+            array_c = np.array(dataset_certo.variables[owt])
+            array_owt[idx, :, :] = array_c[0, :, :]
+
+    dataset_certo.close()
+
+    nvalid = 0
+    required_valid_pixels = 9
+    if args.verbose:
+        print(f'[INFO] Required valid pixels per parameter: 9')
+        print(f'[INFO] Checking grid values...')
+    for index, row in grid.iterrows():
+        ycmems = int(row['YCMEMS'])
+        xcmems = int(row['XCMEMS'])
+        ycerto = int(row['YCERTO'])
+        xcerto = int(row['XCERTO'])
+        array_cmems_here = array_cmems[:, ycmems - 1:ycmems + 2, xcmems - 1:xcmems + 2]
+        n_cmems_good = np.count_nonzero(array_cmems_here != fill_value_cmems, axis=(1, 2))
+        array_certo_here = array_certo[:, ycerto - 1:ycerto + 2, xcerto - 1:xcerto + 2]
+        n_certo_good = np.count_nonzero(array_certo_here != fill_value_certo, axis=(1, 2))
+
+        n_valid_here = np.count_nonzero(n_cmems_good >= required_valid_pixels) + np.count_nonzero(
+            n_certo_good >= required_valid_pixels)
+        valid = 0
+        if n_valid_here > 0:
+            nvalid = nvalid + 1
+            valid = 1
+
+        # array_certo_good = array_certo_here[array_certo_here != fill_value_certo]
+        # valid = 0
+
+        # if len(array_certo_good) >= required_valid_pixels and len(array_cmems_good) >= required_valid_pixels:
+        #    nvalid = nvalid + 1
+        #    valid = 1
+
+        grid.loc[index, 'Valid'] = valid
+        if valid == 1:
+            all_cmems = np.mean(array_cmems_here, axis=(1, 2))
+            all_certo = np.mean(array_certo_here, axis=(1, 2))
+            all_cmems[n_cmems_good < required_valid_pixels] = -999.0
+            all_certo[n_certo_good < required_valid_pixels] = -999.0
+            # print(all_cmems.shape,len(col_names_cmems),col_names_cmems)
+            grid.loc[index, col_names_cmems] = all_cmems
+            # print(all_certo.shape, len(col_names_certo), col_names_certo)
+            grid.loc[index, col_names_certo] = all_certo
+            if len(optical_water_types) > 0:
+                res_owt = np.zeros(len(optical_water_types))
+
+                for iowt in range(len(optical_water_types)):
+                    array_owt_here = array_owt[iowt, ycerto - 1:ycerto + 2, xcerto - 1:xcerto + 2]
+                    array_owt_here = array_owt_here[array_owt_here < 18]
+                    if len(array_owt_here) == 0:
+                        res_owt[iowt] = -1
+                    else:
+                        res_owt[iowt] = np.argmax(np.bincount(array_owt_here.flatten().astype(np.int32)))
+                grid.loc[index, optical_water_types] = res_owt
+    if nvalid > 0:
+        grid_valid = grid[grid['Valid'] == 1]
+        grid_valid.to_csv(file_out, sep=';')
+        if args.verbose:
+            print(f'[INFO] Completed. Number of valid values: {nvalid}')
+    else:
+        print(f'[WARNING] Valid pixels were not found')
 
 
 def copy_files():
