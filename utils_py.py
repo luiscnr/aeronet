@@ -1190,7 +1190,10 @@ def do_coverage_cmems_certo():
                 ncout = assign_data_variable(ncout, iday, f'CERTO_{wlc}_', stats_nan)
             for param in all_certo:
                 ncout = assign_data_variable(ncout, iday, f'CERTO_{param}_', stats_nan)
-            ncout = assign_data_variable(ncout, iday,'CERTO_owt_dominant_OWT',stats_nan)
+            stats = {
+                'mode': -999.0
+            }
+            ncout = assign_data_variable(ncout, iday,'CERTO_owt_dominant_OWT',stats)
         iday = iday + 1
         date_here = date_here + timedelta(hours=nhours)
     ncout.close()
