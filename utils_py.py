@@ -1145,7 +1145,7 @@ def do_coverage_cmems_certo():
             file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
             if os.path.exists(file_cmems):
                 dataset_cmems = Dataset(file_cmems)
-                stats = get_stats_variable(dataset_cmems, f'RRS{wlc}',False)
+                stats = get_stats_variable(dataset_cmems, f'RRS{wlc}',False,stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CMEMS_{wlc}_', stats)
                 dataset_cmems.close()
             else:
@@ -1154,7 +1154,7 @@ def do_coverage_cmems_certo():
             file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-{param}-bs-fr.nc')
             if os.path.exists(file_cmems):
                 dataset_cmems = Dataset(file_cmems)
-                stats = get_stats_variable(dataset_cmems, f'{param.upper()}',False)
+                stats = get_stats_variable(dataset_cmems, f'{param.upper()}',False,stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CMEMS_{param}_', stats)
                 dataset_cmems.close()
             else:
@@ -1177,12 +1177,12 @@ def do_coverage_cmems_certo():
         if os.path.exists(file_certo):
             dataset_certo = Dataset(file_certo)
             for wlc in wl_certo:
-                stats = get_stats_variable(dataset_certo, f'Rw{wlc}_rep',False)
+                stats = get_stats_variable(dataset_certo, f'Rw{wlc}_rep',False,stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CERTO_{wlc}_', stats)
             for param in all_certo:
-                stats = get_stats_variable(dataset_certo,param,False)
+                stats = get_stats_variable(dataset_certo,param,False,stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CERTO_{param}_', stats)
-            stats = get_stats_variable(dataset_certo,'owt_dominant_OWT',True)
+            stats = get_stats_variable(dataset_certo,'owt_dominant_OWT',True,stats_nan)
             ncout.variables['CERTO_owt_dominant_OWT'][iday] = stats['mode']
             dataset_certo.close()
         else:
@@ -1203,10 +1203,11 @@ def assign_data_variable(ncout, iday, prename, stats):
     return ncout
 
 
-def get_stats_variable(dataset, variable, compute_mode):
+def get_stats_variable(dataset, variable, compute_mode,stats_nan):
     array_c = np.array(dataset.variables[variable])
     array_v = array_c[array_c != dataset.variables[variable]._FillValue]
-
+    if len(array_v)==0:
+        return stats_nan
     if not compute_mode:
         stats = {
             'N': array_v.shape[0],
