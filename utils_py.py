@@ -10,6 +10,8 @@ import stat
 import subprocess
 import warnings
 
+import pytz
+
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(
@@ -18,9 +20,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-m', "--mode", help="Mode",
                     choices=['concatdf', 'removerep', 'checkextractsdir', 'dhusget', 'printscp', 'removencotmp',
                              'removefiles', 'copyfile', 'copys3folders', 'comparison_bal_multi_olci',
-                             'comparison_multi_olci', 'comparison_cmems_certo', 'extract_csv', 'checksensormask',
-                             'match-ups_from_extracts',
-                             'doors_certo_msi_csv', 'aqua_check'])
+                             'comparison_multi_olci', 'comparison_cmems_certo', 'coverage_cmems_certo', 'extract_csv',
+                             'checksensormask',
+                             'match-ups_from_extracts', 'doors_certo_msi_csv', 'aqua_check'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
 parser.add_argument('-fr', "--file_ref", help="File ref")
@@ -179,6 +181,9 @@ def main():
 
     if args.mode == 'comparison_cmems_certo':
         do_comparison_cmems_certo()
+
+    if args.mode == 'coverage_cmems_certo':
+        do_coverage_cmems_certo()
 
     if args.mode == 'extract_csv':
         # do_extract_csv()
@@ -783,14 +788,14 @@ def do_extract_csv_from_extracts():
     file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_2/data_for_extraction_v6_3x3.csv'
     dir_extracts = '/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_2/extracts_orig_cciV6'
 
-    df = pd.read_csv(file_csv,sep=';')
+    df = pd.read_csv(file_csv, sep=';')
     lines_out = ['CCIV6_RRS412;CCIV6_RRS443;CCIV6_RRS490;CCIV6_RRS510;CCIV6_RRS560;CCIV6_RRS665']
     for index, row in df.iterrows():
         line_out = None
-        #print(row)
+        # print(row)
         extract = row['Extract']
 
-        if not isinstance(extract,str):
+        if not isinstance(extract, str):
             lines_out.append('-999.0;-999.0;-999.0;-999.0;-999.0;-999.0')
             continue
         file_extract = os.path.join(dir_extracts, f'extract_{extract}')
@@ -804,11 +809,11 @@ def do_extract_csv_from_extracts():
             # else:
             #     rrs_val = rrs_val_c
             # 3x3
-            rrs_here = rrs[0,iband,11:14,11:14]
+            rrs_here = rrs[0, iband, 11:14, 11:14]
 
             rrs_here = rrs_here[~rrs_here.mask]
-            print(rrs_here,len(rrs_here))
-            if len(rrs_here)>=1:
+            print(rrs_here, len(rrs_here))
+            if len(rrs_here) >= 1:
                 rrs_val = np.mean(rrs_here)
             else:
                 rrs_val = -999.0
@@ -826,7 +831,7 @@ def do_extract_csv_from_extracts():
     for line in fr:
         line_out = lines_out[index]
         line_out = f'{line.strip()};{line_out}'
-        #print(line_out)
+        # print(line_out)
         fw.write(line_out)
         fw.write('\n')
         index = index + 1
@@ -1059,6 +1064,168 @@ def do_comparasion_multi_olci_byday():
     f1.close()
 
 
+def do_coverage_cmems_certo():
+    from datetime import datetime as dt
+    from netCDF4 import Dataset
+    start_date = dt.strptime(args.start_date, '%Y-%m-%d')
+    end_date = dt.strptime(args.end_date, '%Y-%m-%d')
+    date_here = start_date
+    nhours = 24
+    if args.interval:
+        nhours = int(args.interval) * 24
+    file_out = args.output
+    dir_out_base = os.path.dirname(file_out)
+    if not os.path.exists(dir_out_base):
+        print(f'[ERROR] Output dir: {dir_out_base} does not exist')
+        return
+    if not os.path.basename(file_out).endswith('.nc'):
+        print(f'[ERROR] Output file shoud be a NetCDF file')
+        return
+    # SERVER
+    if args.input == 'SERVER':
+        dir_cmems_orig = '/dst04-data1/OC/OLCI/daily_v202311_bc'
+        dir_certo_orig = '/store3/DOORS/CERTO_SOURCES'
+    # LOCAL
+    elif args.input == 'LOCAL':
+        dir_cmems_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CMEMS'
+        dir_certo_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CERTO'
+    else:
+        return
+
+    wl_cmems = ['400', '412_5', '442_5', '490', '510', '560', '620', '665', '673_75', '681_25', '708_75', '753_75',
+                '778_75', '865', '885', '1020']
+    wl_certo = ['400', '412', '443', '490', '510', '560', '620', '665', '674', '681', '709', '754', '779', '865',
+                '885', '1020']
+    all_cmems = ['chl','kd490','tsmnn']
+    all_certo = ['blended_chla', 'blended_chla_from_predominant_owt', 'blended_chla_top_2_weighted',
+                 'blended_chla_top_3_weighted']
+    stats = ['N', 'avg', 'std', 'min', 'max', 'median', 'p25', 'p75']
+    stats_nan = {}
+    for stat in stats:
+        stats_nan[stat] = -999.0
+    stats_nan['N'] = 0
+
+
+    ndays = (end_date - start_date).days + 1
+    print('[INFO] NDays is: ', ndays)
+
+    ncout = Dataset(file_out, 'w', format='NETCDF4')
+    ncout.createDimension('time', ndays)
+    ncout.createVariable('time', 'f8', ('time',), fill_value=-999.0, zlib=True, complevel=6)
+    # time_array = np.zeros((ndays,),dtype=np.float64)
+    for wl in wl_cmems:
+        for stat in stats:
+            name_var = f'CMEMS_{wl}_{stat}'
+            ncout.createVariable(name_var, 'f4', ('time',), fill_value=-999.0, zlib=True, complevel=6)
+    for wl in wl_certo:
+        for stat in stats:
+            name_var = f'CERTO_{wl}_{stat}'
+            ncout.createVariable(name_var, 'f4', ('time',), fill_value=-999.0, zlib=True, complevel=6)
+    for param in all_cmems:
+        for stat in stats:
+            name_var = f'CMEMS_{param}_{stat}'
+            ncout.createVariable(name_var, 'f4', ('time',), fill_value=-999.0, zlib=True, complevel=6)
+    for param in all_certo:
+        for stat in stats:
+            name_var = f'CERTO_{param}_{stat}'
+            ncout.createVariable(name_var, 'f4', ('time',), fill_value=-999.0, zlib=True, complevel=6)
+    name_var = 'CERTO_owt_dominant_OWT'
+    ncout.createVariable(name_var, 'i4', ('time',), fill_value=-999.0, zlib=True, complevel=6)
+
+    iday = 0
+    while date_here <= end_date:
+        if args.verbose:
+            print(f'[INFO] Worknig for date: {date_here}...')
+        ncout.variables['time'][iday] = float(date_here.replace(hour=12, tzinfo=pytz.utc).timestamp())
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_cmems = os.path.join(dir_cmems_orig, year, jday)
+        dir_certo = os.path.join(dir_certo_orig, year, jday)
+        for wlc in wl_cmems:
+            file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
+            if os.path.exists(file_cmems):
+                dataset_cmems = Dataset(file_cmems)
+                stats = get_stats_variable(dataset_cmems, f'RRS{wlc}',False)
+                ncout = assign_data_variable(ncout, iday, f'CMEMS_{wlc}_', stats)
+                dataset_cmems.close()
+            else:
+                ncout = assign_data_variable(ncout, iday, f'CMEMS_{wlc}_', stats_nan)
+        for param in all_cmems:
+            file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-{param}-bs-fr.nc')
+            if os.path.exists(file_cmems):
+                dataset_cmems = Dataset(file_cmems)
+                stats = get_stats_variable(dataset_cmems, f'{param.upper()}',False)
+                ncout = assign_data_variable(ncout, iday, f'CMEMS_{param}_', stats)
+                dataset_cmems.close()
+            else:
+                ncout = assign_data_variable(ncout, iday, f'CMEMS_{param}_', stats_nan)
+        name_certo = f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc'
+        file_certo = os.path.join(dir_certo, name_certo)
+        if not os.path.exists(file_certo):
+            try:
+                dir_certo_year = os.path.join(dir_certo_orig, year)
+                if not os.path.isdir(dir_certo_year):
+                    os.mkdir(dir_certo_year)
+                dir_certo_jday = os.path.join(dir_certo_year, jday)
+                if not os.path.isdir(dir_certo_jday):
+                    os.mkdir(dir_certo_jday)
+                download_olci_source(name_certo, file_certo)
+            except:
+                pass
+        if os.path.exists(file_certo) and os.stat(file_certo).st_size == 0:
+            os.remove(file_certo)
+        if os.path.exists(file_certo):
+            dataset_certo = Dataset(file_certo)
+            for wlc in wl_certo:
+                stats = get_stats_variable(dataset_certo, f'Rw{wlc}_rep',False)
+                ncout = assign_data_variable(ncout, iday, f'CERTO_{wlc}_', stats)
+            for param in all_certo:
+                stats = get_stats_variable(dataset_certo,param,False)
+                ncout = assign_data_variable(ncout, iday, f'CERTO_{param}_', stats)
+            stats = get_stats_variable(dataset_certo,'owt_dominant_OWT',True)
+            ncout.variables['CERTO_owt_dominant_OWT'][iday] = stats['mode']
+            dataset_certo.close()
+        else:
+            for wlc in wl_certo:
+                ncout = assign_data_variable(ncout, iday, f'CERTO_{wlc}_', stats_nan)
+            for param in all_certo:
+                ncout = assign_data_variable(ncout, iday, f'CERTO_{param}_', stats_nan)
+            ncout = assign_data_variable(ncout, iday,'CERTO_owt_dominant_OWT',stats_nan)
+        iday = iday + 1
+        date_here = date_here + timedelta(hours=nhours)
+    ncout.close()
+
+
+def assign_data_variable(ncout, iday, prename, stats):
+    for stat in stats:
+        name_var = f'{prename}{stat}'
+        ncout.variables[name_var][iday] = stats[stat]
+    return ncout
+
+
+def get_stats_variable(dataset, variable, compute_mode):
+    array_c = np.array(dataset.variables[variable])
+    array_v = array_c[array_c != dataset.variables[variable]._FillValue]
+
+    if not compute_mode:
+        stats = {
+            'N': array_v.shape[0],
+            'avg': np.mean(array_v),
+            'std': np.std(array_v),
+            'min': np.min(array_v),
+            'max': np.max(array_v),
+            'median': np.median(array_v),
+            'p25': np.percentile(array_v, 25),
+            'p75': np.percentile(array_v, 75)
+        }
+    if compute_mode:
+        array_v = array_v.astype(np.int16)
+        stats = {
+            'mode': np.argmax(np.bincount(array_v))
+        }
+    return stats
+
+
 def do_comparison_cmems_certo():
     import pandas as pd
     from netCDF4 import Dataset
@@ -1068,12 +1235,15 @@ def do_comparison_cmems_certo():
     do_global = False
     do_add_param = False
     do_prepare_plot = False
+    do_prepare_plot_all = False
     if args.input == 'GRID':
         do_grid = True
     if args.input.startswith('GLOBAL%'):
         do_global = True
     if args.input == 'PREPAREPLOT':
         do_prepare_plot = True
+    if args.input == 'PREPAREPLOTALL':
+        do_prepare_plot_all = True
     if args.input == 'ADDPARAM':
         do_add_param = True
 
@@ -1151,7 +1321,7 @@ def do_comparison_cmems_certo():
         return
 
     if do_global:
-        print('[INFO] STARTED  GETTIG GLOBAL POINTS...')
+        print('[INFO] STARTED  GETTING GLOBAL POINTS...')
         from datetime import datetime as dt
         # getting global points
         dir_out_base = args.output
@@ -1193,10 +1363,13 @@ def do_comparison_cmems_certo():
         if param_name == 'RRS':
             colCMEMS = f'{colCMEMS}_{param_rrs_cmems}'
             colCERTO = f'{colCERTO}_{param_rrs_certo}'
+            first_line = f'Date;Index;CMEMSVal;CERTOVal'
+        if param_name == 'ALL':
+            first_line = None
 
-        first_line = f'Date;Index;CMEMSVal;CERTOVal'
         f1 = open(file_out, 'w')
-        f1.write(first_line)
+        if first_line is not None:
+            f1.write(first_line)
         nfiles = 0
 
         date_here = start_date
@@ -1206,7 +1379,29 @@ def do_comparison_cmems_certo():
             file_c = os.path.join(dir_comparison, f'Comparison_{param_name}_{year}{jday}.csv')
             date_here_str = date_here.strftime('%Y-%m-%d')
 
-            if os.path.exists(file_c):
+            ##first line if is None
+            if os.path.exists(file_c) and param_name == 'ALL':
+                if first_line is None:
+                    fr = open(file_c, 'r')
+                    first_line = fr.readline()
+                    first_line_s = first_line.strip().split(';')[3:]
+                    first_line = f'Date;{";".join(first_line_s)}'
+                    fr.close()
+                    f1.write(first_line)
+                fr = open(file_c, 'r')
+                started = False
+                for line in fr:
+                    if not started:
+                        started = True
+                    else:
+                        line_s = line.strip().split(';')[3:]
+                        line = f'{date_here_str};{";".join(line_s)}'
+                        f1.write('\n')
+                        f1.write(line)
+
+                fr.close()
+
+            if os.path.exists(file_c) and param_name != 'ALL':
                 print(f'[INFO]Date: {date_here}->{file_c}')
                 nfiles = nfiles + 1
                 points_here = pd.read_csv(file_c, sep=';')
@@ -1217,14 +1412,9 @@ def do_comparison_cmems_certo():
                     line = f'{date_here_str};{index_here};{cmems_val};{certo_val}'
                     f1.write('\n')
                     f1.write(line)
-                    # if (param == 'CHL' or param == 'KD490') and (multi_val < 0 or olci_val < 0):
-                    #     continue
-                    # if (param == 'CHL' or param == 'KD490') and (olci_val <= 0):
-                    #     continue
             date_here = date_here + timedelta(hours=24)  # 10 days
-            # if date_here.year==2019 and date_here.month==10 and date_here.day==23:
-            #     date_here = date_here + timedelta(hours=24)
 
+        print(f'[INFO] Completed')
         return
 
     if do_prepare_plot:
@@ -1307,6 +1497,54 @@ def do_comparison_cmems_certo():
                     f1.write(line)
             f1.close()
 
+        return
+
+    if do_prepare_plot_all:
+        file_csv = args.output
+        if not os.path.exists(file_csv):
+            print(f'[ERROR] Input file csv {file_csv} does not exist')
+            return
+        name = os.path.basename(file_csv)
+        file_out = os.path.join(os.path.dirname(file_csv), f'{name[:-4]}_common.csv')
+        dir_ref = os.path.join(os.path.dirname(file_csv), 'RRS_POINTS')
+        for name in os.listdir(dir_ref):
+            if name.find('valid_common.csv') > 0:
+                file_ref = os.path.join(dir_ref, name)
+                break
+        df = pd.read_csv(file_ref, sep=';')
+        indices = []
+        for index, row in df.iterrows():
+            date_here = row['Date']
+            index_here = row['Index']
+            index_here = f'{index_here:.0f}'
+
+            di = f'{date_here}_{index_here}'
+            print(di)
+            indices.append(di)
+        print('Common points: ', len(indices))
+        dinput = pd.read_csv(file_csv, sep=';')
+        fout = open(file_out, 'w')
+        first_line = ";".join(dinput.columns.tolist())
+        fout.write(first_line)
+        ntotal = 0
+        nadded = 0
+        for index, row in dinput.iterrows():
+
+            date_here = row['Date']
+            index_here = str(row['Index'])
+            di = f'{date_here}_{index_here}'
+            if ntotal % 1000 == 0:
+                print(nadded, ' de ', ntotal, '->', di)
+            ntotal = ntotal + 1
+            if di in indices:
+                lr = [str(x) for x in row.tolist()]
+                line = ";".join(lr)
+                fout.write('\n')
+                fout.write(line)
+                nadded = nadded + 1
+
+        fout.close()
+        print(f'Total lines: {ntotal} Added: {nadded}')
         return
 
     if do_add_param:
