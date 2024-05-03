@@ -1207,7 +1207,13 @@ def get_stats_variable(dataset, variable, compute_mode,stats_nan):
     array_c = np.array(dataset.variables[variable])
     array_v = array_c[array_c != dataset.variables[variable]._FillValue]
     if len(array_v)==0:
-        return stats_nan
+        if not compute_mode:
+            return stats_nan
+        if compute_mode:
+            stats = {
+                'mode': -999.0
+            }
+            return stats
     if not compute_mode:
         stats = {
             'N': array_v.shape[0],
