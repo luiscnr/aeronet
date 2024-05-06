@@ -1111,6 +1111,9 @@ def do_coverage_cmems_certo():
     if args.input.endswith('CMEMS'):
         do_spatial_coverage_cmems(dir_cmems_orig, start_date, end_date, wl_cmems, all_cmems, file_out)
         return
+    if args.input.endswith('CERTO'):
+        do_spatial_coverage_certo(dir_certo_orig, start_date, end_date, wl_certo, all_certo, file_out)
+        return
 
     ncout = Dataset(file_out, 'w', format='NETCDF4')
     ncout.createDimension('time', ndays)
@@ -1199,6 +1202,101 @@ def do_coverage_cmems_certo():
     ncout.close()
 
 
+def do_spatial_coverage_certo(dir_certo_orig,start_date,end_date,wl_certo,all_certo,file_out):
+    from netCDF4 import Dataset
+
+    date_here = start_date
+    nhours = 24
+    if args.interval:
+        nhours = int(args.interval) * 24
+
+
+
+    ##gettting file ref
+    file_ref = None
+    while date_here <= end_date:
+        if args.verbose:
+            print(f'[INFO] Getting file ref with date: {date_here}...')
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_certo = os.path.join(dir_certo_orig, year, jday)
+        name_certo = f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc'
+        file_certo = os.path.join(dir_certo, name_certo)
+        if os.path.exists(file_certo):
+            file_ref = file_certo
+            break
+        if file_ref is not None:
+            break
+        date_here = date_here + timedelta(hours=nhours)
+
+    if file_ref is None:
+        return
+
+    ##start dataset out from Dataset Ref
+    datasetRef = Dataset(file_ref)
+    n_lat = len(datasetRef.dimensions['lat'])
+    n_lon = len(datasetRef.dimensions['lon'])
+    lat_array = np.array(datasetRef.variables['lat'])
+    lon_array = np.array(datasetRef.variables['lon'])
+    ncout = Dataset(file_out, 'w', format='NETCDF4')
+    ncout.createDimension('lat', n_lat)
+    ncout.createDimension('lon', n_lon)
+    var_lat = ncout.createVariable('lat', 'f4', ('lat',), fill_value=-999.0, zlib=True, complevel=6)
+    var_lon = ncout.createVariable('lon', 'f4', ('lon',), fill_value=-999.0, zlib=True, complevel=6)
+    var_lat.setncatts(datasetRef['lat'].__dict__)
+    var_lon.setncatts(datasetRef['lon'].__dict__)
+    var_lat[:] = lat_array[:]
+    var_lon[:] = lon_array[:]
+    fill_value = datasetRef[all_certo[0]]._FillValue
+    datasetRef.close()
+
+    ##Adding variables
+    ndays_by_var = {}
+    for wl in wl_certo:
+        name_var = f'Rw{wl}_rep'
+        ndays_by_var[name_var] = 0
+        ncout.createVariable(name_var, 'f4', ('lat', 'lon'), fill_value=-999.0, zlib=True, complevel=6)
+        ncout[name_var][:, :] = np.zeros((n_lat, n_lon))
+    for param in all_certo:
+        name_var = f'{param}'
+        ndays_by_var[name_var] = 0
+        ncout.createVariable(name_var, 'f4', ('lat', 'lon'), fill_value=-999.0, zlib=True, complevel=6)
+        ncout[name_var][:, :] = np.zeros((n_lat, n_lon))
+
+    ##checking coverage
+    date_here = start_date
+    while date_here <= end_date:
+        if args.verbose:
+            print(f'[INFO] Checking coverage for date: {date_here}')
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_certo = os.path.join(dir_certo_orig, year, jday)
+        name_certo = f'CERTO_blk_{date_here.strftime("%Y%m%d")}_OLCI_RES300__final_l3_product.nc'
+        file_certo = os.path.join(dir_certo, name_certo)
+
+        if os.path.exists(file_certo):
+            datasetCERTO = Dataset(file_certo)
+            for wlc in wl_certo:
+                name_var = f'Rw{wlc}_rep'
+                ndays_by_var[name_var] = ndays_by_var[name_var] + 1
+                array = np.squeeze(np.array(datasetCERTO.variables[name_var]))
+                check = np.array(ncout.variables[name_var])
+                check[array != fill_value] = check[array != fill_value] + 1
+                ncout.variables[name_var][:, :] = check[:, :]
+
+            for param in all_certo:
+                name_var = f'{param}'
+                ndays_by_var[name_var] = ndays_by_var[name_var] + 1
+                array = np.squeeze(np.array(datasetCERTO.variables[name_var]))
+                check = np.array(ncout.variables[name_var])
+                check[array != fill_value] = check[array != fill_value] + 1
+                ncout.variables[name_var][:, :] = check[:, :]
+            datasetCERTO.close()
+        date_here = date_here + timedelta(hours=nhours)
+    ncout.setncatts(ndays_by_var)
+    ncout.close()
+    print('COMPLETED')
+
 def do_spatial_coverage_cmems(dir_cmems_orig, start_date, end_date, wl_cmems, all_cmems, file_out):
     from netCDF4 import Dataset
 
@@ -1222,7 +1320,7 @@ def do_spatial_coverage_cmems(dir_cmems_orig, start_date, end_date, wl_cmems, al
                 break
         if file_ref is not None:
             break
-        date_here = date_here + timedelta(nhours)
+        date_here = date_here + timedelta(hours=nhours)
 
     if file_ref is None:
         return
@@ -1287,7 +1385,7 @@ def do_spatial_coverage_cmems(dir_cmems_orig, start_date, end_date, wl_cmems, al
                 check[array != -999.0] = check[array != -999.0] + 1
                 ncout.variables[name_var][:, :] = check[:, :]
                 datasetCMEMS.close()
-        date_here = date_here + timedelta(nhours)
+        date_here = date_here + timedelta(hours=nhours)
     ncout.setncatts(ndays_by_var)
     ncout.close()
     print('COMPLETED')
