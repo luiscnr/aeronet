@@ -1082,11 +1082,11 @@ def do_coverage_cmems_certo():
         print(f'[ERROR] Output file shoud be a NetCDF file')
         return
     # SERVER
-    if args.input == 'SERVER':
+    if args.input == 'SERVER' or args.input == 'SCMEMS' or args.input == 'SCERTO':
         dir_cmems_orig = '/dst04-data1/OC/OLCI/daily_v202311_bc'
         dir_certo_orig = '/store3/DOORS/CERTO_SOURCES'
     # LOCAL
-    elif args.input == 'LOCAL':
+    elif args.input == 'LOCAL' or args.input == 'LCMEMS' or args.input == 'LCERTO':
         dir_cmems_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CMEMS'
         dir_certo_orig = '/mnt/c/DATA_LUIS/DOORS_WORK/COMPARISON_CMEMS_CERTO/SOURCES_CERTO'
     else:
@@ -1096,7 +1096,7 @@ def do_coverage_cmems_certo():
                 '778_75', '865', '885', '1020']
     wl_certo = ['400', '412', '443', '490', '510', '560', '620', '665', '674', '681', '709', '754', '779', '865',
                 '885', '1020']
-    all_cmems = ['chl','kd490','tsmnn']
+    all_cmems = ['chl', 'kd490', 'tsmnn']
     all_certo = ['blended_chla', 'blended_chla_from_predominant_owt', 'blended_chla_top_2_weighted',
                  'blended_chla_top_3_weighted']
     stats = ['N', 'avg', 'std', 'min', 'max', 'median', 'p25', 'p75']
@@ -1105,9 +1105,12 @@ def do_coverage_cmems_certo():
         stats_nan[stat] = -999.0
     stats_nan['N'] = 0
 
-
     ndays = (end_date - start_date).days + 1
     print('[INFO] NDays is: ', ndays)
+
+    if args.input.endswith('CMEMS'):
+        do_spatial_coverage_cmems(dir_cmems_orig, start_date, end_date, wl_cmems, all_cmems, file_out)
+        return
 
     ncout = Dataset(file_out, 'w', format='NETCDF4')
     ncout.createDimension('time', ndays)
@@ -1145,7 +1148,7 @@ def do_coverage_cmems_certo():
             file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
             if os.path.exists(file_cmems):
                 dataset_cmems = Dataset(file_cmems)
-                stats = get_stats_variable(dataset_cmems, f'RRS{wlc}',False,stats_nan)
+                stats = get_stats_variable(dataset_cmems, f'RRS{wlc}', False, stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CMEMS_{wlc}_', stats)
                 dataset_cmems.close()
             else:
@@ -1154,7 +1157,7 @@ def do_coverage_cmems_certo():
             file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-{param}-bs-fr.nc')
             if os.path.exists(file_cmems):
                 dataset_cmems = Dataset(file_cmems)
-                stats = get_stats_variable(dataset_cmems, f'{param.upper()}',False,stats_nan)
+                stats = get_stats_variable(dataset_cmems, f'{param.upper()}', False, stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CMEMS_{param}_', stats)
                 dataset_cmems.close()
             else:
@@ -1177,12 +1180,12 @@ def do_coverage_cmems_certo():
         if os.path.exists(file_certo):
             dataset_certo = Dataset(file_certo)
             for wlc in wl_certo:
-                stats = get_stats_variable(dataset_certo, f'Rw{wlc}_rep',False,stats_nan)
+                stats = get_stats_variable(dataset_certo, f'Rw{wlc}_rep', False, stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CERTO_{wlc}_', stats)
             for param in all_certo:
-                stats = get_stats_variable(dataset_certo,param,False,stats_nan)
+                stats = get_stats_variable(dataset_certo, param, False, stats_nan)
                 ncout = assign_data_variable(ncout, iday, f'CERTO_{param}_', stats)
-            stats = get_stats_variable(dataset_certo,'owt_dominant_OWT',True,stats_nan)
+            stats = get_stats_variable(dataset_certo, 'owt_dominant_OWT', True, stats_nan)
             ncout.variables['CERTO_owt_dominant_OWT'][iday] = stats['mode']
             dataset_certo.close()
         else:
@@ -1196,6 +1199,99 @@ def do_coverage_cmems_certo():
     ncout.close()
 
 
+def do_spatial_coverage_cmems(dir_cmems_orig, start_date, end_date, wl_cmems, all_cmems, file_out):
+    from netCDF4 import Dataset
+
+    date_here = start_date
+    nhours = 24
+    if args.interval:
+        nhours = int(args.interval) * 24
+
+    ##gettting file ref
+    file_ref = None
+    while date_here <= end_date:
+        if args.verbose:
+            print(f'[INFO] Getting file ref with date: {date_here}...')
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_cmems = os.path.join(dir_cmems_orig, year, jday)
+        for wlc in wl_cmems:
+            file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
+            if os.path.exists(file_cmems):
+                file_ref = file_cmems
+                break
+        if file_ref is not None:
+            break
+        date_here = date_here + timedelta(nhours)
+
+    if file_ref is None:
+        return
+
+    ##start dataset out from Dataset Ref
+    datasetRef = Dataset(file_ref)
+    n_lat = len(datasetRef.dimensions['lat'])
+    n_lon = len(datasetRef.dimensions['lon'])
+    lat_array = np.array(datasetRef.variables['lat'])
+    lon_array = np.array(datasetRef.variables['lon'])
+    ncout = Dataset(file_out, 'w', format='NETCDF4')
+    ncout.createDimension('lat', n_lat)
+    ncout.createDimension('lon', n_lon)
+    var_lat = ncout.createVariable('lat', 'f4', ('lat',), fill_value=-999.0, zlib=True, complevel=6)
+    var_lon = ncout.createVariable('lon', 'f4', ('lon',), fill_value=-999.0, zlib=True, complevel=6)
+    var_lat.setncatts(datasetRef['lat'].__dict__)
+    var_lon.setncatts(datasetRef['lon'].__dict__)
+    var_lat[:] = lat_array[:]
+    var_lon[:] = lon_array[:]
+    datasetRef.close()
+
+    ##Adding variables
+    ndays_by_var = {}
+    for wl in wl_cmems:
+        name_var = f'RRS{wl}'
+        ndays_by_var[name_var] = 0
+        ncout.createVariable(name_var, 'f4', ('lat','lon'), fill_value=-999.0, zlib=True, complevel=6)
+        ncout[name_var][:,:] = np.zeros((n_lat,n_lon))
+    for param in all_cmems:
+        name_var = f'{param.upper()}'
+        ndays_by_var[name_var] = 0
+        ncout.createVariable(name_var, 'f4', ('lat','lon'), fill_value=-999.0, zlib=True, complevel=6)
+        ncout[name_var][:, :] = np.zeros((n_lat, n_lon))
+
+    ##checking coverage
+    date_here = start_date
+    while date_here <= end_date:
+        if args.verbose:
+            print(f'[INFO] Checking coverage for date: {date_here}')
+        year = date_here.strftime('%Y')
+        jday = date_here.strftime('%j')
+        dir_cmems = os.path.join(dir_cmems_orig, year, jday)
+        for wlc in wl_cmems:
+            name_var = f'RRS{wlc}'
+            file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-rrs{wlc}-bs-fr.nc')
+            if os.path.exists(file_cmems):
+                ndays_by_var[name_var] = ndays_by_var[name_var]+1
+                datasetCMEMS = Dataset(file_cmems)
+                array = np.squeeze(np.array(datasetCMEMS.variables[name_var]))
+                check = np.array(ncout.variables[name_var])
+                check[array!=-999.0] = check[array!=-999.0]+1
+                ncout.variables[name_var][:,:] = check[:,:]
+                datasetCMEMS.close()
+        for param in all_cmems:
+            name_var = f'{param.upper()}'
+            file_cmems = os.path.join(dir_cmems, f'O{year}{jday}-{param}-bs-fr.nc')
+            if os.path.exists(file_cmems):
+                ndays_by_var[name_var] = ndays_by_var[name_var] + 1
+                datasetCMEMS = Dataset(file_cmems)
+                array = np.squeeze(np.array(datasetCMEMS.variables[name_var]))
+                check = np.array(ncout.variables[name_var])
+                check[array != -999.0] = check[array != -999.0] + 1
+                ncout.variables[name_var][:, :] = check[:, :]
+                datasetCMEMS.close()
+        date_here = date_here + timedelta(nhours)
+    ncout.setncatts(ndays_by_var)
+    ncout.close()
+    print('COMPLETED')
+
 def assign_data_variable(ncout, iday, prename, stats):
     for stat in stats:
         name_var = f'{prename}{stat}'
@@ -1203,10 +1299,10 @@ def assign_data_variable(ncout, iday, prename, stats):
     return ncout
 
 
-def get_stats_variable(dataset, variable, compute_mode,stats_nan):
+def get_stats_variable(dataset, variable, compute_mode, stats_nan):
     array_c = np.array(dataset.variables[variable])
     array_v = array_c[array_c != dataset.variables[variable]._FillValue]
-    if len(array_v)==0:
+    if len(array_v) == 0:
         if not compute_mode:
             return stats_nan
         if compute_mode:
