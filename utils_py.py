@@ -3483,8 +3483,8 @@ def do_comparison_bal_multi_olci():
     #FOLDERS: CHLA, RRS443, RRS490, RRS510, RRS560, RRS670
     dir_out = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/CHLA_202411'
     file_grid = '/store/COP2-OC-TAC/BAL_Evolutions/COMPARISON_MULTI_OLCI/Grid.csv'
-    start_date = dt(2019,1,1)
-    end_date = dt(2019,12,31)
+    start_date = dt(2020,1,6)
+    end_date = dt(2020,12,31)
     #end_date = dt(2022,12,31)
     date_here = start_date
     while date_here<=end_date:
