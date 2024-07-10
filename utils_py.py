@@ -3504,7 +3504,7 @@ def do_comparison_bal_multi_olci():
             if os.path.exists(file_multi) and os.path.exists(file_olci):
                 print(f'[INFO] Making date: {date_here}')
                 file_out = os.path.join(dir_out,f'Comparison_CHL_{year}{jday}.csv')
-                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL',False)
+                make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL')
         date_here = date_here + timedelta(hours=240)
 
     # getting global points
