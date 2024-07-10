@@ -356,8 +356,8 @@ def do_test6():
     return True
 
 def main():
-    if do_test6():
-        return
+    # if do_test6():
+    #     return
 
     print('[INFO] Started')
 
