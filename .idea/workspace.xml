@@ -5,10 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7b9af9f7-2504-4fe8-8c1b-6f801bd04985" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/odvlois/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/odvlois/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/s3olcitrim_bal_frompy.py" beforeDir="false" afterPath="$PROJECT_DIR$/s3olcitrim_bal_frompy.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils_py.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils_py.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -46,7 +43,7 @@
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$USER_HOME$/anaconda3/envs/aeronet/lib/python3.10/site-packages/pyodv/base.py" />
+    <property name="last_opened_file_path" value="/mnt/c/DATA_LUIS/OCTAC_WORK/nasa_getscenes_2022.py" />
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
   </component>
   <component name="RunManager" selected="Python.main">
