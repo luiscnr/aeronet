@@ -3887,8 +3887,10 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
     if file_multi is not None:
         dataset_multi = Dataset(file_multi)
         array_multi = np.array(dataset_multi.variables[variable_multi])
+        ndim_multi = len(array_multi.shape)
     dataset_olci = Dataset(file_olci)
     array_olci = np.array(dataset_olci.variables[variable_olci])
+    ndim_olci= len(array_olci.shape)
     for index, row in grid.iterrows():
         ymulti = int(row['YMulti'])
         xmulti = int(row['XMulti'])
@@ -3898,8 +3900,14 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         if file_multi is None:
             val_multi = -999
         else:
-            val_multi = array_multi[0, ymulti, xmulti]
-        array_here = array_olci[0, yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
+            if ndim_multi==3:
+                val_multi = array_multi[0, ymulti, xmulti]
+            elif ndim_multi==2:
+                val_multi = array_multi[ymulti, xmulti]
+        if ndim_olci==3:
+            array_here = array_olci[0, yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
+        elif ndim_olci==2:
+            array_here = array_olci[yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
         array_here_good = array_here[array_here != -999]
         val_olci = -999
         if len(array_here_good) == nvalid:
