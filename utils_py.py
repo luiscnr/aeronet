@@ -26,7 +26,7 @@ parser.add_argument('-m', "--mode", help="Mode",
                              'insitu_match-ups', 'read_odv', 'iop_qaa', 'filter_chla','stats_by_index'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
-parser.add_argument('fg', "--file_grid",help="File grid to compute stats_by_index")
+parser.add_argument('-fg', "--file_grid",help="File grid to compute stats_by_index")
 parser.add_argument('-fr', "--file_ref", help="File ref")
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
 parser.add_argument('-r', "--region", help="Region")
