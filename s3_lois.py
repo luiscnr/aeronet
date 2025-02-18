@@ -4,6 +4,7 @@ from datetime import datetime as dt
 
 class S3Product:
     def __init__(self, path_prod):
+        #added comment to check branch changes
         self.path_prod = path_prod
         self.prod_name = path_prod.split('/')[-1]
         self.VALID = False

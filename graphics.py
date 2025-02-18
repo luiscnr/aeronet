@@ -19,6 +19,7 @@ from s3_product_list import S3ProductList
 
 
 def main():
+    ##ADDED COMMENT TO CHECK CHANGES
     print('STARTED')
     sites = 'Gustav_Dalen_Tower, Helsinki_Lighthouse, Irbe_Lighthouse'
     if args.sites:
