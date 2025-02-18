@@ -23,10 +23,10 @@ parser.add_argument('-m', "--mode", help="Mode",
                              'comparison_multi_olci', 'comparison_cmems_certo', 'coverage_cmems_certo', 'extract_csv',
                              'checksensormask', 'match-ups_from_extracts', 'doors_certo_msi_csv', 'aqua_check',
                              'monocle',
-                             'insitu_match-ups', 'read_odv', 'iop_qaa', 'filter_chla','stats_by_index'])
+                             'insitu_match-ups', 'read_odv', 'iop_qaa', 'filter_chla', 'stats_by_index','mdb_to_csv'])
 parser.add_argument('-i', "--input", help="Input", required=True)
 parser.add_argument('-o', "--output", help="Output", required=True)
-parser.add_argument('-fg', "--file_grid",help="File grid to compute stats_by_index")
+parser.add_argument('-fg', "--file_grid", help="File grid to compute stats_by_index")
 parser.add_argument('-fr', "--file_ref", help="File ref")
 parser.add_argument('-wce', "--wce", help="Wild Card Expression")
 parser.add_argument('-r', "--region", help="Region")
@@ -365,7 +365,7 @@ def do_test6():
     return True
 
 
-def compute_stats_by_index(file_points,file_grid,file_out):
+def compute_stats_by_index(file_points, file_grid, file_out):
     # file_points = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/chl_points.csv'
     # file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/Grid.csv'
     # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/chl_points_stats_by_index.csv'
@@ -433,6 +433,144 @@ def do_test8():
     return True
 
 
+def do_test9():
+    print('Test 9')
+    import pandas as pd
+    file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/chl_points.csv'
+    df = pd.read_csv(file_csv, sep=';')
+    data = {}
+    print('gettin data')
+    for index, row in df.iterrows():
+        date = row['Date']
+        index_here = f'{int(row["Index"]):.0f}'
+        if date not in data.keys():
+            data[date] = {
+                index_here: {
+                    'multi_chl': float(row['MultiVal']),
+                    'olci_chl': float(row['OlciVal'])
+                }
+            }
+        else:
+            data[date][index_here] = {
+                'multi_chl': float(row['MultiVal']),
+                'olci_chl': float(row['OlciVal'])
+            }
+    print('done')
+    file_cdf = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/flagcdf_points.csv'
+    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/chl_points_with_flagcdf.csv'
+    df_cdf = pd.read_csv(file_cdf, sep=';')
+    date_cdf = np.array(df_cdf['Date'])
+    index_cdf = np.array(df_cdf['Index'])
+    ndata = len(date_cdf)
+    chl_olci_cdf = np.zeros((ndata,))
+    chl_olci_cdf[:] = -999.0
+    chl_multi_cdf = np.zeros((ndata,))
+    chl_multi_cdf[:]=-999.0
+    for idx in range(ndata):
+        if (idx%100)==0: print('IDX: ',idx)
+        date_h = date_cdf[idx]
+        index_h = f'{int(index_cdf[idx]):.0f}'
+        if index_h in data[date_h].keys():
+            chl_olci_cdf[idx] = data[date_h][index_h]['olci_chl']
+            chl_multi_cdf[idx] = data[date_h][index_h]['multi_chl']
+
+    df_cdf['chl_multi_cdf'] = chl_multi_cdf
+    df_cdf['chl_olci_cdf'] = chl_olci_cdf
+
+    df_cdf.to_csv(file_out,sep=';')
+
+    return True
+
+def do_test10():
+    file_grid_comparison = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/comparison_cdf_byindex.csv'
+    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/comparison_cdf_byindex_out.csv'
+    file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/Grid.csv'
+    df_comparison = pd.read_csv(file_grid_comparison,sep=';')
+    df_grid = pd.read_csv(file_grid,sep=';')
+    lat_lon = {}
+    for index,row in df_grid.iterrows():
+        index_here = f'{int(row["Index"]):.0f}'
+        lat_lon[index_here] = {
+            'lat': float(row['Latitude']),
+            'lon': float(row['Longitude'])
+        }
+
+    indices = np.array(df_comparison['Index'])
+    ndata = len(indices)
+    lat_out = np.zeros((ndata,))
+    lon_out = np.zeros((ndata,))
+    for idx,index_h in enumerate(indices):
+        index_here = f'{int(index_h):.0f}'
+        lat_out[idx] = lat_lon[index_here]['lat']
+        lon_out[idx] = lat_lon[index_here]['lon']
+    df_comparison['lat'] = lat_out
+    df_comparison['lon'] = lon_out
+    df_comparison.to_csv(file_out,sep=';')
+
+
+
+    return True
+
+def make_maps_from_csv_3():
+    file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/comparison_cdf_byindex.csv'
+    fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/comparison_cdf_byindex_CDF_ONLY_OLCI.tif'
+    title = 'CDF only for OLCI'
+    df_csv = pd.read_csv(file_csv, sep=';')
+    lat_grid = np.array(df_csv['lat'])
+    lon_grid = np.array(df_csv['lon'])
+    apd = np.array(df_csv['CDF_ONLYOLCI-PORC'])
+    print(lat_grid,lon_grid,apd)
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    ax = plt.axes(projection=ccrs.Miller())
+    ax.set_extent([10, 31, 53, 67], crs=ccrs.PlateCarree())
+    # ax.coastlines()
+
+    import cartopy.feature as cfeature
+    land_50m = cfeature.NaturalEarthFeature('physical', 'land', '10m',
+                                            edgecolor='black',
+                                            facecolor=cfeature.COLORS['land'])
+
+    ax.add_feature(land_50m)
+
+    import matplotlib as mpl
+    bounds = [0, 20, 40, 60, 80, 100]
+    cmap_r = mpl.colormaps['jet'].resampled(len(bounds) + 1)
+    handles = []
+    str_legend = []
+    for idx in range(len(bounds)):
+        b = bounds[idx]
+        color = cmap_r(idx)
+        if b == 100:
+            valid = apd >= 100
+            str_legend.append('>100%')
+        else:
+            bn = bounds[idx + 1]
+            valid = np.logical_and(apd >= b, apd < bn)
+            str_legend.append(f'{b}%-{bn}%')
+        lat_here = lat_grid[valid]
+        lon_here = lon_grid[valid]
+        hp = ax.plot(lon_here, lat_here, color=color, linewidth=0, marker='o', markersize=1,
+                     transform=ccrs.Geodetic())
+        handles.append(hp[0])
+    import matplotlib.ticker as mticker
+    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                      linewidth=0.5, color='black', alpha=0.6, linestyle=':')
+    gl.xlocator = mticker.FixedLocator([15, 12, 18, 21, 24, 27, 30])
+    gl.ylocator = mticker.FixedLocator([54, 57, 60, 63, 66])
+    gl.xlabel_style = {'size': 10}
+    gl.ylabel_style = {'size': 10}
+
+    ax.set_title(title)
+
+    plt.legend(handles, str_legend, fontsize=8, loc='upper left', markerscale=1.0, bbox_to_anchor=(-0.01, 1.01),
+               framealpha=1.0)
+
+    plt.savefig(fout, dpi=300, bbox_inches='tight', pil_kwargs={"compression": "tiff_lzw"})
+
+    return True
+
+
 def make_maps_from_csv_2():
     file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/chl_points_stats_by_index.csv'
     fout = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/APD_Distribution_ByGridPoint.tif'
@@ -488,8 +626,8 @@ def make_maps_from_csv_2():
 
     plt.savefig(fout, dpi=300, bbox_inches='tight', pil_kwargs={"compression": "tiff_lzw"})
 
-
     return True
+
 
 def make_maps_from_csv():
     file_grid = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/Grid.csv'
@@ -628,11 +766,122 @@ def compute_statistics(xdata, ydata):
 def rmse(predictions, targets):
     return np.sqrt(((np.asarray(predictions) - np.asarray(targets)) ** 2).mean())
 
+def do_extract_csv_from_mdb():
+    from netCDF4 import Dataset
+    import pandas as pd
+    file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/insitu_with_extracts/insitucomplete_with_extracts_multi/Baltic_CHLA_Valid_AllSources_1997-2023_FINAL_TIMEFILTERED_complete.csv'
+    file_mdb = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/MDBs/MDB_MULTI_CCI_1KM_OC-CCI-BALCHL202411_19970909T000000_20231219T000000.nc'
+    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/CSV_MATCH-UPS/MULTI/Baltic_CHLA_Valid_AllSources_1997-2023_FINAL_TIMEFILTERED_complete.csv'
+    print('file_csv:',file_csv,os.path.exists(file_csv))
+    print('file_mdb:', file_mdb,os.path.exists(file_mdb))
+    print('file_out:', file_out)
+
+    df = pd.read_csv(file_csv,sep=';')
+    dataset = Dataset(file_mdb)
+    array,nvalid = get_array_3x3(dataset.variables['satellite_CHL'][:],dataset.variables['satellite_CHL'][:])
+    df['satellite_CHL'] = array
+    df['satellite_CHL_NVALID'] = nvalid
+
+    fvalues = [0,1,2,3]
+    fmeanings = ['NO_BLOOM','SUB_SURFACE_BLOOM','SURFACE_BLOOM','BOTH_BLOOMS']
+    arrays_flag = get_arrays_flag('FLAG_CYANO',fvalues,fmeanings,dataset.variables['satellite_CYANOBLOOM'][:],dataset.variables['satellite_CHL'][:])
+
+    for name in arrays_flag:
+        df[name] = arrays_flag[name]
+
+    satellite_rrs = dataset.variables['satellite_Rrs'][:]
+    satellite_bands = dataset.variables['satellite_bands'][:]
+    for iband in range(len(satellite_bands)):
+        array,nvalid = get_array_3x3(np.ma.squeeze(satellite_rrs[:,iband,:,:]),dataset.variables['satellite_CHL'][:])
+        name_out = f'satellite_RRS{satellite_bands[iband]}'
+        df[name_out] = array
+
+    variables_to_average = ['satellite_RRS555','satellite_RRS670','satellite_CDF_AVG','satellite_CDF_MLP3B','satellite_CDF_MLP4B','satellite_CDF_MLP5B',
+                            'satellite_CHL_MLP3B','satellite_CHL_MLP4B','satellite_CHL_MLP5B','satellite_WEIGHT_MLP3B','satellite_WEIGHT_MLP4B','satellite_WEIGHT_MLP5B']
+
+    for name_var in variables_to_average:
+        array, nvalid = get_array_3x3(dataset.variables[name_var][:], dataset.variables['satellite_CHL'][:])
+        df[name_var] = array
+
+    dataset.close()
+
+    df.to_csv(file_out,sep=';',index=False)
+
+    # path_extracts = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/extracts_complete'
+    # for name in os.listdir(path_extracts):
+    #     file_nc = os.path.join(path_extracts,name)
+    #     dataset  = Dataset(file_nc)
+    #     if len(dataset.variables)==17:
+    #         print('Num: ',name,len(dataset.variables))
+    #
+    #     dataset.close()
+
+def get_arrays_flag(name_var,values,meanings,array_data,array_ref):
+    data = array_data[:, 11:14, 11:14]
+    array_central = data[:,1,1]
+    array_central = np.ma.filled(array_central,-999)
+
+    mask_array = array_ref[:, 11:14, 11:14]
+    data_masked = np.ma.array(data, mask=mask_array.mask)
+    data_masked = np.ma.filled(data_masked,-999)
+
+    ndata = data_masked.shape[0]
+    nvalues = len(values)
+    array_mode = np.zeros((ndata,))
+    array_values = np.zeros((ndata,nvalues))
+    index_values = {}
+    for idx,val in enumerate(values):
+        index_values[val]=idx
+
+    array_mode[:]=-999
+
+    for i in range(data_masked.shape[0]):
+        atemporal = np.squeeze(data_masked[i,:,:])
+        atemporal = atemporal[atemporal!=-999]
+        if len(atemporal)>0:
+            modals, counts = np.unique(atemporal, return_counts=True)
+            index = np.argmax(counts)
+            array_mode[i] = modals[index]
+            if len(modals)>=1: array_values[i,index_values[int(modals[0])]] = array_values[i,index_values[int(modals[0])]] + counts[0]
+            if len(modals) >= 2: array_values[i, index_values[int(modals[1])]] = array_values[i, index_values[
+                int(modals[1])]] + counts[1]
+            if len(modals) >= 3: array_values[i, index_values[int(modals[2])]] = array_values[i, index_values[
+                int(modals[2])]] + counts[2]
+            if len(modals) >= 4: array_values[i, index_values[int(modals[3])]] = array_values[i, index_values[
+                int(modals[3])]] + counts[3]
+
+
+    all_arrays = {
+        f'{name_var}_CENTRAL':array_central,
+        f'{name_var}_MODE':array_mode
+    }
+    for idx in range(len(meanings)):
+        all_arrays[f'{name_var}_{meanings[idx]}'] = array_values[:,idx]
+
+    return all_arrays
+
+
+    # from scipy import stats
+    # array_mode = stats.mode(data_masked)
+    # print('--> MODE', array_mode.shape)
+
+def get_array_3x3(array_data,array_ref):
+
+    data = array_data[:,11:14,11:14]
+    mask_array = array_ref[:,11:14,11:14]
+    data_masked = np.ma.array(data,mask=mask_array.mask)
+    array_out = np.ma.mean(data_masked,axis=(1,2))
+    num_out = np.ma.count(data_masked,axis=(1,2))
+    array_out = np.ma.filled(array_out,-999.0)
+
+    return array_out,num_out
+
+
 
 def main():
-    # if make_maps_from_csv():
+    # if make_maps_from_csv_3():
     #     return
-    # if do_test8():
+    # if do_test10():
     #     return
 
     print('[INFO] Started')
@@ -799,6 +1048,9 @@ def main():
     if args.mode == 'extract_csv':
         # do_extract_csv()
         do_extract_csv_from_extracts()
+
+    if args.mode == 'mdb_to_csv':
+        do_extract_csv_from_mdb()
 
     if args.mode == 'checksensormask':
         # do_check_sensor_mask()
@@ -1806,17 +2058,17 @@ def do_test():
 def do_extract_csv_from_extracts():
     import pandas as pd
     from netCDF4 import Dataset
-    type = 'rrs_3x3'
+    type = 'rrs_1x1'
     param = type.split('_')[0]
     window = type.split('_')[1]
 
-    # file_csv = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_3/insitu_{param}/Chl_in_situ_dataset_cleaned_extra_{param}.csv'
-    # file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_3/insitu_{param}/Chl_in_situ_dataset_cleaned_extra_{type}.csv'
-    # dir_extracts = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_3/extracts_orig_cciV6_{param}'
+    file_csv = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_4/Rrs_all_lois_extracts.csv'
+    file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_4/Rrs_all_lois_match-ups.csv'
+    dir_extracts = f'/mnt/c/DATA_LUIS/OCTAC_WORK/ARC_TEST/MATCH-UPSv6_4/extracts_rrs_4'
 
-    file_csv = f'/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/Baltic_CHLA_Valid_AllSources_1997-2023_extracts_{param}.csv'
-    file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/Baltic_CHLA_Valid_AllSources_1997-2023_extracts_{type}.csv'
-    dir_extracts = f'/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/extracts_{param}'
+    # file_csv = f'/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/Baltic_CHLA_Valid_AllSources_1997-2023_extracts_{param}.csv'
+    # file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/Baltic_CHLA_Valid_AllSources_1997-2023_extracts_{type}.csv'
+    # dir_extracts = f'/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/extracts_{param}'
 
     if param == 'chl':
         # variable_list = ['CHL','MICRO','MICRO_BIAS','MICRO_RMSE','NANO','NANO_BIAS','NANO_RMSE','PICO','PICO_BIAS','PICO_RMSE']
@@ -3740,8 +3992,8 @@ def do_comparison_bal_multi_olci():
     # file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/COMPARISON_OLCI_MULTI//Comparison_chla_2016117.csv'
     # make_comparison_impl(file_grid,file_multi,file_olci,file_out,'CHL','CHL',False)
 
-    do_comparison = True
-    do_global = False
+    do_comparison = False
+    do_global = True
     from datetime import datetime as dt
     ##comparison chla
     if do_comparison:
@@ -3768,25 +4020,26 @@ def do_comparison_bal_multi_olci():
             if os.path.exists(dir_olci) and os.path.exists(dir_multi):
 
                 # chla,rrs442_5,rrs490,rrs510,rrs560,rrs665
-                #file_olci = os.path.join(dir_olci, f'O{year}{jday}-chl-bal-fr.nc')
+                # file_olci = os.path.join(dir_olci, f'O{year}{jday}-chl-bal-fr.nc')
                 file_olci = os.path.join(dir_olci, f'O{year}{jday}-cdf_flag_multiple-bal-fr.nc')
                 # chla,rrs443,rrs490,rrs510,rrs560,rrs665
-                #file_multi = os.path.join(dir_multi, f'C{year}{jday}-chl-bal-hr.nc')
+                # file_multi = os.path.join(dir_multi, f'C{year}{jday}-chl-bal-hr.nc')
                 date1 = date_here.strftime('%Y%j')
                 date2 = date_here.strftime('%d%b%y')
                 name = format_name.replace('$DATE1$', date1)
                 name = name.replace('$DATE2$', date2)
-                file_multi = os.path.join(dir_multi,name)
+                file_multi = os.path.join(dir_multi, name)
 
                 if os.path.exists(file_multi) and os.path.exists(file_olci):
                     print(f'[INFO] Making date: {date_here}')
                     file_out = os.path.join(dir_out, f'Comparison_FLAGCDF_{year}{jday}.csv')
-                    make_comparison_impl(file_grid, file_multi, file_olci, file_out, 'CDF_FLAG_MULTIPLE', 'CDF_FLAG_MULTIPLE')
+                    make_comparison_impl(file_grid, file_multi, file_olci, file_out, 'CDF_FLAG_MULTIPLE',
+                                         'CDF_FLAG_MULTIPLE')
             date_here = date_here + timedelta(hours=240)
 
     if do_global:
         ##getting global points
-        val = 'CHL'
+        val = 'FLAGCDF'
         dir_comparison = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/{val}'
         val = val.lower()
         file_out = f'/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_COMPARISON_OLCI_MULTI/{val}_points.csv'
@@ -3890,7 +4143,7 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         ndim_multi = len(array_multi.shape)
     dataset_olci = Dataset(file_olci)
     array_olci = np.array(dataset_olci.variables[variable_olci])
-    ndim_olci= len(array_olci.shape)
+    ndim_olci = len(array_olci.shape)
     for index, row in grid.iterrows():
         ymulti = int(row['YMulti'])
         xmulti = int(row['XMulti'])
@@ -3900,13 +4153,13 @@ def make_comparison_impl(file_grid, file_multi, file_olci, file_out, variable_mu
         if file_multi is None:
             val_multi = -999
         else:
-            if ndim_multi==3:
+            if ndim_multi == 3:
                 val_multi = array_multi[0, ymulti, xmulti]
-            elif ndim_multi==2:
+            elif ndim_multi == 2:
                 val_multi = array_multi[ymulti, xmulti]
-        if ndim_olci==3:
+        if ndim_olci == 3:
             array_here = array_olci[0, yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
-        elif ndim_olci==2:
+        elif ndim_olci == 2:
             array_here = array_olci[yolci - wini:yolci + wfin, xolci - wini:xolci + wfin]
         array_here_good = array_here[array_here != -999]
         val_olci = -999
