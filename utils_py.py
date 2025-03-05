@@ -721,7 +721,7 @@ def make_maps_from_csv():
 
 
 def compute_statistics(xdata, ydata):
-    from scipy import stats
+    import scipy.stats
     valid_stats = {}
     valid_stats['N'] = len(xdata)
 
@@ -734,7 +734,7 @@ def compute_statistics(xdata, ydata):
 
     sat_obs = np.log10(sat_obs)
     ref_obs = np.log10(ref_obs)
-    slope, intercept, r_value, p_value, std_err = stats.linregress(ref_obs, sat_obs)
+    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(ref_obs, sat_obs)
     valid_stats['R2'] = r_value * r_value
     valid_stats['RMSD'] = rmse(sat_obs, ref_obs)
     ref_mean = np.mean(ref_obs)
