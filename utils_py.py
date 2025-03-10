@@ -766,25 +766,52 @@ def compute_statistics(xdata, ydata):
 def rmse(predictions, targets):
     return np.sqrt(((np.asarray(predictions) - np.asarray(targets)) ** 2).mean())
 
-def do_extract_csv_from_mdb():
+def do_extract_csv_from_mdb(sensor):
     from netCDF4 import Dataset
     import pandas as pd
-    file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/insitu_with_extracts/insitucomplete_with_extracts_multi/Baltic_CHLA_Valid_AllSources_1997-2023_FINAL_TIMEFILTERED_complete.csv'
-    file_mdb = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/MDBs/MDB_MULTI_CCI_1KM_OC-CCI-BALCHL202411_19970909T000000_20231219T000000.nc'
-    file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/CSV_MATCH-UPS/MULTI/Baltic_CHLA_Valid_AllSources_1997-2023_FINAL_TIMEFILTERED_complete.csv'
+    sensor = sensor.upper()
+
+    if sensor=='MULTI':
+        file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/insitu_with_extracts/insitucomplete_with_extracts_multi/Baltic_CHLA_Valid_AllSources_1997-2023_FINAL_TIMEFILTERED_complete.csv'
+        file_mdb = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/MDBs/MDB_MULTI_CCI_1KM_OC-CCI-BALCHL202411_19970909T000000_20231219T000000.nc'
+        file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/CSV_MATCH-UPS/MULTI/Baltic_CHLA_Valid_AllSources_1997-2023_FINAL_TIMEFILTERED_complete.csv'
+
+    if sensor=='OLCI':
+        file_csv = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/CSV_MATCH-UPS/OLCI/Baltic_CHLA_Valid_AllSources_2016-2023_FINAL_OLCI_rrs_chl_3x3_filtered_match-ups.csv'
+        file_mdb = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/MDBs/MDB_S3_OLCI_300M_CMEMS-OLCI_20160501T000000_20240415T000000_BAL202411.nc'
+        file_out = '/mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/CSV_MATCH-UPS/OLCI/Baltic_CHLA_Valid_AllSources_2016-2023_FINAL_OLCI_rrs_chl_3x3_filtered_match-ups_complete.csv'
     print('file_csv:',file_csv,os.path.exists(file_csv))
     print('file_mdb:', file_mdb,os.path.exists(file_mdb))
     print('file_out:', file_out)
+    if not os.path.exists(file_csv) or not os.path.exists(file_mdb):
+        return
 
     df = pd.read_csv(file_csv,sep=';')
     dataset = Dataset(file_mdb)
-    array,nvalid = get_array_3x3(dataset.variables['satellite_CHL'][:],dataset.variables['satellite_CHL'][:])
-    df['satellite_CHL'] = array
-    df['satellite_CHL_NVALID'] = nvalid
+
+    ###FOR MULTI
+    if sensor=='MULTI':
+        array,nvalid = get_array_3x3(dataset.variables['satellite_CHL'][:],dataset.variables['satellite_CHL'][:])
+        df['satellite_CHL_202411'] = array
+        df['satellite_CHL_202411_NVALID'] = nvalid
+    ###FOR OLCI
+    if sensor=='OLCI':
+        array,nvalid = get_array_3x3(dataset.variables['satellite_CHL'][:],dataset.variables['satellite_CHL'][:])
+        df['satellite_CHL_202211'] = array
+        df['satellite_CHL_202211_NVALID'] = nvalid
+        array, nvalid = get_array_3x3(dataset.variables['satellite_CHL_202411'][:], dataset.variables['satellite_CHL_202411'][:])
+        df['satellite_CHL_202411'] = array
+        df['satellite_CHL_202411_NVALID'] = nvalid
 
     fvalues = [0,1,2,3]
     fmeanings = ['NO_BLOOM','SUB_SURFACE_BLOOM','SURFACE_BLOOM','BOTH_BLOOMS']
-    arrays_flag = get_arrays_flag('FLAG_CYANO',fvalues,fmeanings,dataset.variables['satellite_CYANOBLOOM'][:],dataset.variables['satellite_CHL'][:])
+
+    if sensor=='MULTI':
+        var_flag_cyano = 'satellite_CYANOBLOOM'
+    if sensor=='OLCI':
+        var_flag_cyano = 'satellite_flag_cyano'
+
+    arrays_flag = get_arrays_flag('FLAG_CYANO',fvalues,fmeanings,dataset.variables[var_flag_cyano][:],dataset.variables['satellite_CHL'][:])
 
     for name in arrays_flag:
         df[name] = arrays_flag[name]
@@ -792,12 +819,18 @@ def do_extract_csv_from_mdb():
     satellite_rrs = dataset.variables['satellite_Rrs'][:]
     satellite_bands = dataset.variables['satellite_bands'][:]
     for iband in range(len(satellite_bands)):
+        # print('IBAND:---------->',iband)
         array,nvalid = get_array_3x3(np.ma.squeeze(satellite_rrs[:,iband,:,:]),dataset.variables['satellite_CHL'][:])
         name_out = f'satellite_RRS{satellite_bands[iband]}'
         df[name_out] = array
 
-    variables_to_average = ['satellite_RRS555','satellite_RRS670','satellite_CDF_AVG','satellite_CDF_MLP3B','satellite_CDF_MLP4B','satellite_CDF_MLP5B',
+    if sensor=='MULTI':
+        variables_to_average = ['satellite_RRS555','satellite_RRS670','satellite_CDF_AVG','satellite_CDF_MLP3B','satellite_CDF_MLP4B','satellite_CDF_MLP5B',
                             'satellite_CHL_MLP3B','satellite_CHL_MLP4B','satellite_CHL_MLP5B','satellite_WEIGHT_MLP3B','satellite_WEIGHT_MLP4B','satellite_WEIGHT_MLP5B']
+    if sensor=='OLCI':
+        variables_to_average = ['satellite_CDF_AVG', 'satellite_CDF_MLP3B','satellite_CDF_MLP4B', 'satellite_CDF_MLP5B',
+                                'satellite_CHL_MLP3B', 'satellite_CHL_MLP4B', 'satellite_CHL_MLP5B',
+                                'satellite_WEIGHT_MLP3B', 'satellite_WEIGHT_MLP4B', 'satellite_WEIGHT_MLP5B']
 
     for name_var in variables_to_average:
         array, nvalid = get_array_3x3(dataset.variables[name_var][:], dataset.variables['satellite_CHL'][:])
@@ -870,9 +903,11 @@ def get_array_3x3(array_data,array_ref):
     data = array_data[:,11:14,11:14]
     mask_array = array_ref[:,11:14,11:14]
     data_masked = np.ma.array(data,mask=mask_array.mask)
-    array_out = np.ma.mean(data_masked,axis=(1,2))
+    array_out = np.ma.median(data_masked,axis=(1,2))
     num_out = np.ma.count(data_masked,axis=(1,2))
     array_out = np.ma.filled(array_out,-999.0)
+
+    #print(array_out[0],data[0,1,1],np.ma.mean(data[0,:,:]),np.ma.median(data[0,:,:]))
 
     return array_out,num_out
 
@@ -1050,7 +1085,7 @@ def main():
         do_extract_csv_from_extracts()
 
     if args.mode == 'mdb_to_csv':
-        do_extract_csv_from_mdb()
+        do_extract_csv_from_mdb('olci')
 
     if args.mode == 'checksensormask':
         # do_check_sensor_mask()
