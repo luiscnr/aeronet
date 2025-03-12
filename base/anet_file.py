@@ -71,7 +71,7 @@ class ANETFile:
             else:
                 self.valid_ws = None  ##All the nominal wl have data
 
-            print('CHECKING INFO VARIABLES...')
+            print('[INFO] Checking info variables...')
             self.info_var_names = ['Total_Ozone(Du)', 'Total_NO2(DU)', 'Total_Precipitable_Water(cm)', 'Chlorophyll-a',
                                    'Wind_Speed(m/s)', 'Pressure(hPa)', 'Number_of_Wavelengths']
             check_info_var = self.check_info_var_names()
@@ -230,7 +230,7 @@ class ANETFile:
         ncfile.add_time_variable(self.get_time_as_float_array())
         ncfile.add_nominalws_variable(self.get_nws_as_float_array())
         for var in self.ws_var_names:
-            print('Reading variable: ', var)
+            print('[INFO] Reading variable: ', var)
             if self.valid_ws is None:
                 array = self.get_ws_variable(self.ws_var_names[var]['index_ini'], self.ws_var_names[var]['index_fin'])
             else:
@@ -240,18 +240,18 @@ class ANETFile:
                 var = var.replace('/', '_')
             ncfile.add_2D_variable(var, array)
 
-        print('Reading variable: Exact_Wavelenghts')
+        print('[INFO] Reading variable: Exact_Wavelenghts')
         if self.valid_ws is None:
             ewl_array = self.get_ws_variable(self.s_exact_ws, self.e_exact_ws)
         else:
             ewl_array = self.get_ws_variable_valid(self.s_exact_ws, self.e_exact_ws)
         ewl_array[np.where(ewl_array>0)] = ewl_array[np.where(ewl_array>0)]*1000
         ncfile.add_2D_variable('Exact_Wavelengths', ewl_array)
-        print('Getting variable: F0')
+        print('[INFO] Getting variable: F0')
         fo_array = self.get_fo_variable(ewl_array)
         ncfile.add_2D_variable('F0', fo_array)
 
-        print('Getting simple variables..')
+        print('[INFO] Getting simple variables..')
         for var in self.info_var_names:
             array = self.get_simple_variable(var)
             if '/' in var:
@@ -259,7 +259,7 @@ class ANETFile:
             ncfile.add_1D_variable(var, array)
 
         ncfile.close_file()
-        print('DONE')
+        print(f'[INFO] AERONET-OC file {file_out} has been created.')
 
     def get_rec_df_using_dates(self, dateini, datefin):
         row_ini = -1

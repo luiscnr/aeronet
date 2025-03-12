@@ -1,5 +1,5 @@
 import argparse
-import datetime
+from datetime import datetime as dt
 import os
 import tarfile
 
@@ -12,8 +12,9 @@ import subprocess
 parser = argparse.ArgumentParser(
     description="Generation of NC Aeronet Files using CSV files downloaded from the Aeronet web site")
 parser.add_argument("-d", "--download", help="Download data.", action="store_true")
+parser.add_argument("-nc", "--make_nc", help="Download data.", action="store_true")
 parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
-parser.add_argument('-i', "--inputpath", help="Input (download) directory")
+parser.add_argument('-i', "--inputpath", help="Input (download) directory", required=True)
 parser.add_argument('-o', "--outputpath", help="Output directory")
 parser.add_argument('-s', "--sites", help="Aeronet site. BAL for Baltic Sites")
 parser.add_argument('-t', "--thuillier", help="Thulier method", choices=['interp'])
@@ -33,8 +34,8 @@ def only_test_three():
     from restoweb.resto import RESTO_WEB
     fout = '/mnt/c/DATA_LUIS/HYPERNETS_WORK/ResTO_WispWeb/Test.nc'
     rweb = RESTO_WEB(True)
-    rweb.retrive_data(datetime.datetime.strptime('2021-05-10', '%Y-%m-%d'),
-                      datetime.datetime.strptime('2021-05-15', '%Y-%m-%d'), None)
+    rweb.retrive_data(dt.strptime('2021-05-10', '%Y-%m-%d'),
+                      dt.strptime('2021-05-15', '%Y-%m-%d'), None)
     rweb.save_data_as_ncfile(fout)
     return True
 
@@ -423,35 +424,36 @@ def only_test_seven():
 
     return True
 
+
 def only_test_eight():
     from base.anet_nc_reader import AERONETReader
 
-    #site = 'Galata_Platform'
-    #site = 'Gloria'
+    # site = 'Galata_Platform'
+    # site = 'Gloria'
     site = 'Section-7_Platform'
 
-    #system = 'Black Sea'
+    # system = 'Black Sea'
     system = 'Danube Delta'
 
-    #file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Galata_Platform.LWN_lev20_15.nc'
-    #file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Gloria.LWN_lev20_15.nc'
+    # file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Galata_Platform.LWN_lev20_15.nc'
+    # file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Gloria.LWN_lev20_15.nc'
     file_nc = '/mnt/c/DATA_LUIS/AERONET_OC/AERONET_NC/20020101_20231111_Section-7_Platform.LWN_lev20_15.nc'
 
     areader = AERONETReader(file_nc)
     date_list = areader.get_available_dates('2016-01-01', None)
 
-    #file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Galata_Platform.csv'
-    #file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Gloria.csv'
+    # file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Galata_Platform.csv'
+    # file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Gloria.csv'
     file_out = '/mnt/c/DATA_LUIS/DOORS_WORK/DOOR_insitu_BlackSea_AeronetOC_Section-7_Platform.csv'
 
     first_line = 'System;Station;Date;Time;Lat;Long;Source'
 
     prename = f'{system};{site}'
 
-    #post_name = '12:00;43.044624;28.193190;AERONET-OC' ##Galata_Platform
-    #post_name = '12:00;44.599970;29.359670;AERONET-OC' ##Gloria
-    post_name = '12:00;44.5458;29.4466;AERONET-OC' ##Section-7
-    f1 = open(file_out,'w')
+    # post_name = '12:00;43.044624;28.193190;AERONET-OC' ##Galata_Platform
+    # post_name = '12:00;44.599970;29.359670;AERONET-OC' ##Gloria
+    post_name = '12:00;44.5458;29.4466;AERONET-OC'  ##Section-7
+    f1 = open(file_out, 'w')
     f1.write(first_line)
     for d in date_list:
         print(d)
@@ -461,6 +463,27 @@ def only_test_eight():
     f1.close()
     return True
 
+
+def remove_duplicated_versions(dirbase):
+    last_versions = {}
+    for name in os.listdir(dirbase):
+        site = name[18:name.index('LWN') - 1]
+        proc_date = dt.strptime(name.split('_')[1], '%Y%m%d')
+        if site not in last_versions:
+            last_versions[site] = proc_date
+        else:
+            if proc_date >= last_versions[site]:
+                last_versions[site] = proc_date
+
+    for name in os.listdir(dirbase):
+        site = name[18:name.index('LWN') - 1]
+        proc_date = dt.strptime(name.split('_')[1], '%Y%m%d')
+        if proc_date < last_versions[site]:
+            file_rm = os.path.join(dirbase, name)
+            print(f'[INFO] Removing duplicated file version: {file_rm}')
+            os.remove(file_rm)
+
+
 def main():
     # b = baltic_figure1()
     # b = trajectory_figure()
@@ -469,43 +492,38 @@ def main():
     #     return
     # to run script loca:
     # python3 main.py -i /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_INPUT -o /mnt/c/DATA_LUIS/OCTAC_WORK/BAL_EVOLUTION/EXAMPLES/AERONET_NC
-    print('STARTED...')  # Press Ctrl+F8 to toggle the breakpoint
-    dir_base = args.inputpath
-    dir_output = args.outputpath
+    print('[INFO] Started AERONET-OC download...')  # Press Ctrl+F8 to toggle the breakpoint
 
-    if dir_base is None or dir_output is None:
-        print('[ERROR] Input and output path are required...')
+    if not args.download and not args.make_nc:
+        print(f'[ERROR] Please indicate a mode: -d (--download) or -nc (--make_nc)')
         return
+
+    dir_base = args.inputpath
+    if not os.path.isdir(dir_base):
+        try:
+            os.mkdir(dir_base)
+        except:
+            print(f'[ERROR] Input path is not a valid directory and it could not be created')
+            return
+
+    if args.make_nc:
+        if not args.outputpath:
+            print('[ERROR] Output path is required for the -nc (--make_nc) option')
+            return
+        dir_output = args.outputpath
+        if not os.path.isdir(dir_output):
+            try:
+                os.mkdir(dir_output)
+            except:
+                print(f'[ERROR] Output path is not a valid directory and it could not be created')
+                return
 
     # #dir_base = '/home/lois/PycharmProjects/aeronets/DATA/INPUT_FILES/prueba'
     # # dir_output = '/home/lois/PycharmProjects/aeronets/DATA/OUTPUT_FILES'
 
-    make_download = False
-    if args.download:
-        make_download = True
-
-    if make_download:
-        if args.verbose:
-            print('Downloading level 2')
-        url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
-        r = requests.get(url, allow_redirects=True)
-        file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
-        open(file_out, 'wb').write(r.content)
-        if args.verbose:
-            print('Uncompressing level 2')
-        file_tar = tarfile.open(file_out)
-        file_tar.extractall(dir_base)
-
-        if args.verbose:
-            print('Downloading level 1.5')
-        url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
-        r = requests.get(url, allow_redirects=True)
-        file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
-        open(file_out, 'wb').write(r.content)
-        if args.verbose:
-            print('Uncompressing level 1.5')
-        file_tar = tarfile.open(file_out)
-        file_tar.extractall(dir_base)
+    # make_download = False
+    # if args.download:
+    #     make_download = True
 
     sites = None
     if args.sites:
@@ -513,25 +531,69 @@ def main():
             sites = ['Gustav_Dalen_Tower', 'Irbe_Lighthouse', 'Helsinki_Lighthouse']
         elif args.sites == 'BLK':
             sites = ['Galata_Platform', 'Gloria', 'Section-7_Platform']
+        elif args.sites == 'MED':
+            sites = ['AAOT', 'Casablanca_Platform']
         else:
             sites = [args.sites]
 
+    if args.download:
+        if args.verbose:
+            print('[INFO] Downloading level 2...')
+        url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level20_All_Points_V3.tar.gz'
+        r = requests.get(url, allow_redirects=True)
+        file_out = os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz')
+        open(file_out, 'wb').write(r.content)
+        if args.verbose:
+            print('[INFO] Uncompressing level 2...')
+        file_tar = tarfile.open(file_out)
+        file_tar.extractall(dir_base)
+
+        if args.verbose:
+            print('[INFO] Downloading level 1.5...')
+        url = 'https://aeronet.gsfc.nasa.gov/data_push/V3/LWN/LWN_Level15_All_Points_V3.tar.gz'
+        r = requests.get(url, allow_redirects=True)
+        file_out = os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz')
+        open(file_out, 'wb').write(r.content)
+        if args.verbose:
+            print('[INFO] Uncompressing level 1.5...')
+        file_tar = tarfile.open(file_out)
+        file_tar.extractall(dir_base)
+
+        if args.verbose:
+            print(f'[INFO] Removing tar files...')
+            os.remove(os.path.join(dir_base, 'LWN_Level15_All_Points_V3.tar.gz'))
+            os.remove(os.path.join(dir_base, 'LWN_Level20_All_Points_V3.tar.gz'))
+
+        if args.verbose:
+            print(f'[INFO] Removing duplicated file versions - Level 1.5...')
+            dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
+            remove_duplicated_versions(dir_level15)
+            print(f'[INFO] Removing duplicated file versions - Level 2.5...')
+            dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
+            remove_duplicated_versions(dir_level20)
+
+    if not args.make_nc:
+        return
+
     dir_level15 = os.path.join(dir_base, 'LWN', 'LWN15', 'ALL_POINTS')
     dir_level20 = os.path.join(dir_base, 'LWN', 'LWN20', 'ALL_POINTS')
+    remove_duplicated_versions(dir_level15)
+    remove_duplicated_versions(dir_level20)
     files_level20 = os.listdir(dir_level20)
     for f in files_level20:
         f20 = os.path.join(dir_level20, f)
         f15 = os.path.join(dir_level15, f.replace('lev20', 'lev15'))
-        site = f[f.find('_') + 1:f.find('.')]
-        site = site[site.find('_') + 1:len(site)]
+        site = f[18:f.index('LWN') - 1]
+        # site = f[f.find('_') + 1:f.find('.')]
+        # site = site[site.find('_') + 1:len(site)]
 
-        do_site = True
-        if sites is not None:
-            if site not in sites:
-                do_site = False
+        do_site = True if site in sites else False
 
-        # if site == 'Gloria':
         if do_site:
+            file_out = os.path.join(dir_output, f.replace('lev20', 'lev20_15') + '.nc')
+            if os.path.exists(file_out):
+                print(f'[WARNNING] {file_out} already exists. Skipping...')
+                continue
             if args.verbose:
                 print('[INFO] DOING SITE:', site, '-----------------------------------------')
             afilel20 = ANETFile(f20, None, False)
@@ -541,9 +603,9 @@ def main():
                 print(f'[INFO] File 1.5: {f15}')
             dfcombined = afilel20.check_and_append_df(afilel15)
             aeronet_combined = ANETFile(None, dfcombined, True)
-            file_out = os.path.join(dir_output, f.replace('lev20', 'lev20_15') + '.nc')
             aeronet_combined.create_aeorent_ncfile(file_out)
 
+    remove_duplicated_versions(dir_output)
 
 def only_test():
     print(['TEST'])
@@ -565,7 +627,7 @@ def only_test():
     #         print(plist.list_pfiles[l]['time'].strftime('%H:%M'))
     # plist.get_dfvalid_spectra('')
 
-    # plist.create_list_from_folder_dates(path_folder, datetime.datetime(2021, 4, 1), datetime.datetime(2021, 12, 21),
+    # plist.create_list_from_folder_dates(path_folder, dt(2021, 4, 1), dt(2021, 12, 21),
     #                                     [225])
     # last_day = [0,31,28,31,30,31,30,31,31,30,31,30,31]
     # for month in range(4,5):
@@ -574,8 +636,8 @@ def only_test():
     #     plist.add_th_validation_criteria(None, 500, 0, 'lt')
     #     path_outliers = os.path.join(path_folder, 'Outliers_225.csv')
     #     plist.add_outliers_df(None, path_outliers)
-    #     start_date = datetime.datetime(2021, month, 1)
-    #     end_date = datetime.datetime(2021,month,last_day[month])
+    #     start_date = dt(2021, month, 1)
+    #     end_date = dt(2021,month,last_day[month])
     #     plist.create_list_from_folder_dates(path_folder,start_date, end_date,[225])
     #     print('Nvalidos: ', plist.nfilesvalid)
     #     df = plist.get_dfvalid_spectra(None)
@@ -596,7 +658,7 @@ def only_test():
     #         valid = [False]*nrows
     #         for index,row in dfhere.iterrows():
     #             try:
-    #                 date_here = datetime.datetime.strptime(row['TIME'], '%Y-%m-%d %H:%M:%S')
+    #                 date_here = dt.strptime(row['TIME'], '%Y-%m-%d %H:%M:%S')
     #             except:
     #                 print('ERRROR: ', row['TIME'])
     #             date_here_h = date_here.replace(minute=0)
@@ -640,7 +702,7 @@ def only_test():
     df_fin = None
     idx = 0
     for i in range(len(dfpanthyr.index)):
-        date_here = datetime.datetime.strptime(dfpanthyr.iloc[i].at['TIME'], '%Y-%m-%d %H:%M:%S')
+        date_here = dt.strptime(dfpanthyr.iloc[i].at['TIME'], '%Y-%m-%d %H:%M:%S')
         print(i, date_here)
         rrs_panthyr_values = np.array(dfpanthyr.iloc[i, iwl_start:iwl_end])
         rrs_hysptar_values, hypstar_time = get_nearest_hypernets_spectra(date_here, wllist)
@@ -682,7 +744,7 @@ def get_nearest_hypernets_spectra(date_here, wllist):
         if f.find(wce) >= 0 and f.endswith('.nc'):
             hyp_rrs_fin = np.zeros(len(wllist))
             date_hypstar_str = f.split('_')[5]
-            date_hypstar = datetime.datetime.strptime(date_hypstar_str, '%Y%m%dT%H%M')
+            date_hypstar = dt.strptime(date_hypstar_str, '%Y%m%dT%H%M')
             time_dif_min = abs((date_hypstar - date_here).total_seconds()) / 60
             if time_dif_min < 5:
                 file_hypstar = os.path.join(path_day, f)
@@ -741,7 +803,7 @@ def get_nearest_hypernets_spectra(date_here, wllist):
     #         if m==3 and d>20:
     #             continue
     #         try:
-    #             fecha = datetime.datetime(2022,m,d)
+    #             fecha = dt(2022,m,d)
     #         except:
     #             continue
     #         yearstr = fecha.strftime(('%Y'))
