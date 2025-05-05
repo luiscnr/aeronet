@@ -3751,6 +3751,10 @@ def do_comparison_multi_olci():
         dir_olci_orig = '/store/COP2-OC-TAC/arc/daily'
         dir_multi_orig = '/store/COP2-OC-TAC/arc/multi'
         region = 'arc'
+    if region == 'arcciao':
+        dir_olci_orig = '/store/COP2-OC-TAC/arc/daily_ciao'
+        dir_multi_orig = '/store/COP2-OC-TAC/arc/multi_ciao'
+        region = 'arc'
         # nhours = 24
     # dir_olci_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/OLCI'
     # dir_multi_orig = f'/mnt/c/DATA_LUIS/OCTAC_WORK/{region.upper()}_COMPARISON_OLCI_MULTI/MULTI'

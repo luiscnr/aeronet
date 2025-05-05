@@ -41,7 +41,8 @@ def combine_venise_and_aaot():
 
 
 def distribute_by_year():
-    input_file = '/mnt/c/DATA_LUIS/AERONET_OC/DATE_LISTS/OLCI/Venise_DateList.csv'
+    #input_file = '/mnt/c/DATA_LUIS/AERONET_OC/DATE_LISTS/OLCI/Casablanca_Platform_DateList.csv'
+    input_file = '/mnt/c/Users/LuisGonzalez/OneDrive - NOLOGIN OCEANIC WEATHER SYSTEMS S.L.U/CNR/AERONET_OC/DATE_LISTS/OLCI/Casablanca_Platform_DateList.csv'
     dates_by_year = {}
     fr = open(input_file, 'r')
     for line in fr:

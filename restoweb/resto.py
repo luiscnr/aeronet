@@ -81,6 +81,8 @@ class RESTO_WEB():
                 self.nws = len(farray)
             nline = nline + 1
 
+        for col,unit in zip(col_names,units):
+            print(col,'-->',unit)
         self.ntimes = len(self.times)
         self.get_nominal_ws_from_unit(units[3])
         if self.nominal_wavelenghts is not None:
