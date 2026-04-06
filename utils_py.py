@@ -1003,7 +1003,7 @@ def get_low_rrs(limits_str):
             file_out = os.path.join(dir_out,f'LowRRS_Spectra_{work_date.strftime("%Y%m%d")}.nc')
             for iband,band in enumerate(bands):
                 strband = f'{band}'
-                strband = f'{strband.replace('.','_')}'
+                strband = f'{strband.replace(".","_")}'
                 file_here = os.path.join(dir_date,f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs{strband}-med-fr.nc')
                 dset = Dataset(file_here)
                 rrs_var_here = dset.variables[f'RRS{strband}'][0,y_min:y_max,x_min:x_max]
