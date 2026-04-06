@@ -21,8 +21,13 @@ class RESTO_WEB():
             'REQUEST': 'GetData',
             'TIME': '',
             'INSTRUMENT': 'Wispstation012',
-            'INCLUDE': 'measurement.id, measurement.date, instrument.name, level2.reflectance'
+            'INCLUDE': 'measurement.id, measurement.date, instrument.name, level2.reflectance,site.azimuth,ldp.channel.orientation'
         }
+
+
+
+
+
         self.start_date  = None
         self.end_date = None
         self.instrument = None
@@ -33,6 +38,8 @@ class RESTO_WEB():
         self.nws = -1
         self.ntimes = -1
         self.outstatus = False
+
+
 
     def retrive_data(self, startDate, endDate, instrument):
         self.start_date = startDate
@@ -64,11 +71,14 @@ class RESTO_WEB():
             if len(line) == 0:
                 continue
             dataline = line.split('\t')
+
             if nline == 0:
                 col_names = dataline
             elif nline == 1:
                 units = dataline
             else:
+                if dataline[1]=='None':
+                    continue
                 time = self.get_time_as_seconds_from_1970(dataline[1])
                 self.times.append(time)
                 farray = []
@@ -79,11 +89,15 @@ class RESTO_WEB():
                     farray.append(float(val.strip()))
                 self.rrs.append(farray)
                 self.nws = len(farray)
+                print(dataline[4],dataline[5])
             nline = nline + 1
 
         for col,unit in zip(col_names,units):
             print(col,'-->',unit)
         self.ntimes = len(self.times)
+        if self.ntimes==0:
+           print(f'[ERROR] No measurements were retrieved')
+           return
         self.get_nominal_ws_from_unit(units[3])
         if self.nominal_wavelenghts is not None:
             if len(self.nominal_wavelenghts) == self.nws:
@@ -100,6 +114,7 @@ class RESTO_WEB():
     def save_data_as_ncfile(self, fileout):
         if not self.outstatus:
             print('[ERROR] Data were not correctly retrieved')
+            return
         if self.verbose:
             print(f'[INFO] Saving output file: {fileout}')
         rfile = RESTONCFile(fileout)

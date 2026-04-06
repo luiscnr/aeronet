@@ -912,12 +912,147 @@ def get_array_3x3(array_data,array_ref):
     return array_out,num_out
 
 
+def get_low_rrs(limits_str):
+    from netCDF4 import Dataset
+    # path_base = '/mnt/c/DATA'
+    # dir_out = path_base
+    path_pase = '/store2/OC/OLCI//store2/OC/OLCI/daily_B4_v202602/'
+    dir_out =  '/store/COP2-OC-TAC/COL4_LOW_RRS'
+    work_date = dt(2026,2,26)
+    end_date = dt(2026,4,5)
+    bands = [400, 412.5, 442.5, 490, 510, 560, 665, 708.75, 753.75, 778.75, 865, 885]
+    nbands = len(bands)
+    #limits = [30,40,7,17]
+    limits = [float(x) for x in limits_str.split('_')]
+    fw = open(os.path.join(dir_out,'SummaryLowRrs.csv'),'w')
+    fw.write('Date;NLowRrs;NInvalidChl')
+    while work_date<=end_date:
+        dir_date = os.path.join(path_base,work_date.strftime('%Y'),work_date.strftime('%j'))
+        file_400 = os.path.join(dir_date,f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs400-med-fr.nc')
+        file_412 = os.path.join(dir_date, f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs412_5-med-fr.nc')
+        file_442 = os.path.join(dir_date, f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs442_5-med-fr.nc')
+        file_490 = os.path.join(dir_date, f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs490-med-fr.nc')
+        file_510 = os.path.join(dir_date,f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs510-med-fr.nc')
+        if os.path.exists(file_400) and os.path.exists(file_510) and os.path.exists(file_442) and os.path.exists(file_490) and os.path.exists(file_412):
+            dset = Dataset(file_400)
+            lat_array_orig = dset.variables['lat'][:]
+            lon_array_orig = dset.variables['lon'][:]
+            y_min = int(np.argmin(np.abs(lat_array_orig - limits[0])))
+            y_max = int(np.argmin(np.abs(lat_array_orig - limits[1])))
+            x_min = int(np.argmin(np.abs(lon_array_orig - limits[2])))
+            x_max = int(np.argmin(np.abs(lon_array_orig - limits[3])))
+            # y_min = 0
+            # y_max = 5922
+            # x_min = 0
+            # x_max = 12396
+            rrs_var = dset.variables['RRS400'][0,y_min:y_max,x_min:x_max]
+            lat_array_base = lat_array_orig[y_min:y_max]
+            lon_array_base = lon_array_orig[x_min:x_max]
+            dset.close()
 
+            dset510 = Dataset(file_510)
+            rrs_var_510 = dset510.variables['RRS510'][0,y_min:y_max,x_min:x_max]
+            dset510.close()
+
+            dset490 = Dataset(file_490)
+            rrs_var_490 = dset490.variables['RRS490'][0, y_min:y_max, x_min:x_max]
+            dset490.close()
+
+            dset442 = Dataset(file_442)
+            rrs_var_442 = dset442.variables['RRS442_5'][0, y_min:y_max, x_min:x_max]
+            dset442.close()
+
+            dset412 = Dataset(file_412)
+            rrs_var_412 = dset412.variables['RRS412_5'][0, y_min:y_max, x_min:x_max]
+            dset412.close()
+
+
+            dif_442_490 = np.abs(rrs_var_490-rrs_var_442)
+            dif_412_400 = rrs_var_412 - rrs_var
+
+            mask = rrs_var.mask
+            ny = mask.shape[0]
+            nx = mask.shape[1]
+            my_mask = np.ma.masked_all(mask.shape,np.int16)
+            my_mask[mask==False]=0
+            my_mask[np.logical_and(np.logical_and(rrs_var<0.002,rrs_var_510<0.0025),np.logical_and(dif_442_490<0.00025,dif_412_400>0))]=1
+            my_mask = np.ma.masked_equal(my_mask,0)
+            #print('my_mask',my_mask.size,np.ma.count(my_mask),np.ma.sum(my_mask))
+            lat_array_base = np.repeat(lat_array_base,nx).reshape((ny,nx))
+            lon_array_base = np.tile(lon_array_base,ny).reshape((ny,nx))
+            rrs_var = rrs_var[mask==False]
+            rrs_var_510 = rrs_var_510[mask==False]
+            dif_442_490 = dif_442_490[mask==False]
+            dif_412_400 = dif_412_400[mask==False]
+            # rrs_var_490 = rrs_var_490[mask==False]
+            # rrs_var_442 = rrs_var_442[mask==False]
+            # lat_array = lat_array_base[mask==False]
+            # lon_array = lon_array_base[mask==False]
+            indices = np.where(np.logical_and(np.logical_and(rrs_var<0.002,rrs_var_510<0.0025),np.logical_and(dif_442_490<0.00025,dif_412_400>0)))
+            ndata = len(indices[0])
+
+            print('ndata -->',ndata)
+            if ndata==0:
+                fw.write('\n')
+                fw.write(f'{work_date.strftime("%Y-%m-%d")};0;0')
+                work_date = work_date + timedelta(hours=24)
+                continue
+            # lat_array = lat_array[indices]
+            # lon_array = lon_array[indices]
+            array = np.zeros((ndata,nbands))
+            file_out = os.path.join(dir_out,f'LowRRS_Spectra_{work_date.strftime("%Y%m%d")}.nc')
+            for iband,band in enumerate(bands):
+                strband = f'{band}'
+                strband = f'{strband.replace('.','_')}'
+                file_here = os.path.join(dir_date,f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs{strband}-med-fr.nc')
+                dset = Dataset(file_here)
+                rrs_var_here = dset.variables[f'RRS{strband}'][0,y_min:y_max,x_min:x_max]
+                dset.close()
+                rrs_var_here = rrs_var_here[mask == False]
+                rrs_var_here = rrs_var_here[indices]
+                array[:,iband] = rrs_var_here[:]
+
+            file_chl = os.path.join(dir_date,f'O{work_date.strftime("%Y")}{work_date.strftime("%j")}-chl-med-fr.nc')
+            dchl = Dataset(file_chl)
+            chl_array = dchl.variables['CHL'][0,y_min:y_max,x_min:x_max]
+            chl_here = chl_array[mask == False]
+            chl_here = chl_here[indices]
+            print('invalid chl',np.ma.count_masked(chl_here))
+            dchl.close()
+
+            fw.write('\n')
+            fw.write(f'{work_date.strftime("%Y-%m-%d")};{ndata};{np.ma.count_masked(chl_here)}')
+
+            ncout = Dataset(file_out,'w')
+            ncout.createDimension('data',array.shape[0])
+            ncout.createDimension('bands',array.shape[1])
+            ncout.createDimension('lat',ny)
+            ncout.createDimension('lon',nx)
+            ncout.createVariable('spectra','f4',('data','bands'),zlib = True,complevel=6,fill_value=-999.0)
+            ncout.createVariable('chl_spectra','f4',('data',),zlib=True,complevel=6,fill_value=-999.0)
+            ncout.createVariable('lat','f4',('lat','lon'),zlib=True,complevel=6)
+            ncout.createVariable('lon', 'f4', ('lat','lon'), zlib=True, complevel=6)
+            ncout.createVariable('invalid','i2',('lat','lon'),zlib=True,complevel=6,fill_value=-999)
+            ncout.variables['spectra'][:] = array[:]
+            ncout.variables['lat'][:] = lat_array_base[:]
+            ncout.variables['lon'][:] = lon_array_base[:]
+            ncout.variables['invalid'][:] = my_mask[:]
+            ncout.variables['chl_spectra'][:] = chl_here[:]
+            ncout.close()
+            # for lat_p,lon_p in zip(lat_array,lon_array):
+            #     print(lat_p,lon_p)
+        work_date = work_date + timedelta(hours=24)
+    fw.close()
+    return True
 def main():
     # if make_maps_from_csv_3():
     #     return
     # if do_test10():
     #     return
+
+    if get_low_rrs(args.input):
+        return True
+
 
     print('[INFO] Started')
 
@@ -1111,11 +1246,12 @@ def main():
 def make_filter_chla(input_file, output_file):
     import pandas as pd
     df = pd.read_csv(input_file, sep=';')
-    valid_lines = [True] * len(df.index)
+    valid_lines = np.zeros(len(df.index))
     dtstr_prev = None
     chl_prev = None
     nremoved = 0
-    indices_remove = [7517, 4787, 5254, 5985, 6436, 6909]
+    #indices_remove = [7517, 4787, 5254, 5985, 6436, 6909]
+    indices_remove = []
     latitude = np.array(df['LATITUDE'][:])
     longitude = np.array(df['LONGITUDE'][:])
     for index, row in df.iterrows():
@@ -1125,23 +1261,30 @@ def make_filter_chla(input_file, output_file):
 
             if chl_here == chl_prev or index in indices_remove:
                 # print('Remove line')
-                valid_lines[index] = False
+                valid_lines[index] = 1
                 nremoved = nremoved + 1
             else:
                 if chl_here[0:3] == chl_prev[0:3]:
-                    # print('Remove line')
-                    valid_lines[index] = False
-                    nremoved = nremoved + 1
+                    # print('Remove line', chl_here,chl_prev,chl_here[0:3],chl_prev[0:3])
+                    # valid_lines[index] = 1
+                    # nremoved = nremoved + 1
+                    pass
                 else:
+                    #valid_lines[index-1]=2
+                    #valid_lines[index] = 2
                     print('SAME DATETIME-->', index, chl_here, chl_prev)
                     print(longitude[index - 1], latitude[index - 1])
                     print(longitude[index], latitude[index])
                     print('--------------------------------------------------------------------------->to check')
         dtstr_prev = dtstr_here
         chl_prev = chl_here
-    print(nremoved)
-    df_new = df.loc[valid_lines, :]
-    df_new.to_csv(output_file, sep=';')
+    print('Nremoved:',nremoved)
+
+    df['FLAG_REMOVE'] = valid_lines
+    df.to_csv(input_file,sep=';',index=None)
+
+    df_new = df.loc[valid_lines==0, :]
+    df_new.to_csv(output_file, sep=';', index=None)
 
 
 def compute_iop_qaa_from_csv(input_path):
@@ -1314,16 +1457,24 @@ def make_csv_from_odv(input_path, output_file):
         return
 
     dataset_out = pd.DataFrame()
+    iprogress=0
     for name in os.listdir(input_path):
         if not name.lower().endswith('.txt'): continue
         if name.lower().endswith('readme.txt'): continue
-        print(f'[INFO] File name: {name}')
+        #print(f'[INFO] File name: {name}')
+        if (iprogress%100)==0:
+            print(f'[INFO] Progress: {iprogress}')
+        iprogress = iprogress + 1
         odv = ODV_Struct(os.path.join(input_path, name))
         if odv.valid_odv:
             row = odv.extract_chl_as_row_dict()
+
+
             if row is not None:
-                dataset_out = dataset_out.append(row, ignore_index=True)
-    dataset_out.to_csv(output_file, sep=';')
+
+                df_row = pd.DataFrame.from_dict(row)
+                dataset_out = pd.concat([dataset_out,df_row],ignore_index=True)
+    dataset_out.to_csv(output_file, sep=';',index= None)
     print(f'[INFO] Completed. Data saved to file: {output_file}')
 
 

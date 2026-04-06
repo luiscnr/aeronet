@@ -1,3 +1,5 @@
+from math import isnan
+
 import numpy as np
 import pandas as pd
 import io
@@ -94,6 +96,8 @@ class ODV_Struct(object):
         split = lines.rsplit('\n//', 1)
         table = split[1].strip()
         self.odv_df = pd.read_csv(io.StringIO(table), sep='\t')
+        if 'EDMO_CODE' in self.odv_df.columns:
+            self.odv_df = self.odv_df.rename(columns={'EDMO_CODE':'EDMO_code'})
         self.odv_header = split[0]
         return
 
@@ -203,6 +207,9 @@ class ODV_Struct(object):
             self.valid_odv = True
         else:
             print('manca qualche columna', self.odv_df.columns)
+            for col in self.mandatory_columns:
+                if col not in self.odv_df.columns:
+                    print(f'[ERROR] {col} is missing from {list(self.odv_df.columns)}')
             self.valid_odv = False
         self.tmp_data = []
         for mand_col in self.mandatory_bio_columns:
@@ -244,7 +251,7 @@ class ODV_Struct(object):
             logging.debug(f'Has {len(self.refs)} refs.')
             good_file = True
         else:
-            logging.warning('WARNING: No refs parsed...')
+            #logging.warning('WARNING: No refs parsed...')
             good_file = False
 
         if self.df_qc.shape == self.df_var.shape:
@@ -324,28 +331,32 @@ class ODV_Struct(object):
         return parsed_list
 
     def extract_chl_as_row_dict(self):
-        fout = open('/mnt/c/DATA_LUIS/OCTAC_WORK/MATCH-UPS_ANALYSIS_2024/BAL/var_names.txt', 'a')
+        fout = open('/mnt/c/Users/LuisGonzalez/OneDrive - NOLOGIN OCEANIC WEATHER SYSTEMS S.L.U/CNR/OCTAC_WORK/BAL_EVOLUTION_202411/MATCH-UPS_ANALYSIS_2024/var_names.txt', 'a')
         col_names = self.odv_df.columns.tolist()
         index_chla = -1
+        chla_names = ['CPHLSEP1 [Milligrams per cubic metre]', 'Chlorophyll a [mg/m3]', 'Chlorophyll-a [mg/m^3]','Chlorophyll a (CPHLZZXX_UGPL) [ug/l]',
+                      'CHLA [mg/m^3]','Chlorophyll [microg/l]','CHLAEPIM [Milligrams per cubic metre]','CPHL [milligram/m3]','FLU2 [ug/l]',
+                      'Chlorophyll [mg/m3]','CHLFLUO [kg/m3]','CPHLHPPZ [Micrograms per litre]','CHLA_PTM_F_ACE [ug/l]','CPHLFMP1 [Micrograms per litre]',
+                      'Chlorophyll-a concentration by in-situ chlorophyll fluorometer [�g/l]','CHLA_PTMA_FVG_ACE [ug/l]',
+                      'CHLA_PTMA_NOT_ACE [ug/l]','CHLA_PTM_H_ALC [ug/l]','CHLA_FLM_F_ETH [ug/l]','CHLA [ug/l]','CHLA [milligram/m3]']
         for index, name in enumerate(col_names):
-            if name == 'CPHLSEP1 [Milligrams per cubic metre]':
-                index_chla = index
-                break
-            if name.lower().find('chl') > 0:
+            if name in chla_names:
                 index_chla = index
                 break
 
         if index_chla == -1:
-            print(f'[WARNING]Chlorophyll value is not available')
+            #print(f'[WARNING] Chlorophyll value is not available. Col names: {col_names}')
+            print(f'[WARNING] Chlorophyll value is not available for file: {self.file_path}')
             for name in col_names:
                 if name.lower().find('chl') >= 0:
-                    print(f'[WARNING] Could be chorophyll column: {name} ????????????????????????????')
+                    print(f'[WARNING] Could be chlorophyll column:{name}?')
                     fout.write('\n')
                     fout.write(name)
             return None
 
-        # chla_names = ['CPHLSEP1 [Milligrams per cubic metre]','Chlorophyll a [mg/m3]','Chlorophyll-a [mg/m^3]','CHLA [mg/m^3]']
-        depth_names = ['ADEPZZ01 [Metres]', 'depth [m]']
+
+        depth_names = ['ADEPZZ01 [Metres]','ADEPZZ01 [m]', 'depth [m]','DEPTH [m]','DEPH [meter]','DEPH [m]','Depth [meters]',
+                       'Depth (ADEPZZ01_ULAA) [m]','Depth [m]','DEPTH [meter]']
         depth_name = None
         for name in depth_names:
             if name in col_names:
@@ -353,68 +364,89 @@ class ODV_Struct(object):
                 break
 
         if depth_name is None:
-            print(f'[WARNING] Depth is not defined')
-            if name.lower().find('depth') >= 0 and name != 'Bot. Depth [m]':
-                print(f'[WARNING] Could be depth column: {name} ????????????????????????????')
-                fout.write('\n')
-                fout.write(name)
+            print(f'[WARNING] Depth is not defined. Column names: {col_names}')
+            for name in col_names:
+                if name.lower().find('depth') >= 0 and name != 'Bot. Depth [m]':
+                    print(f'[WARNING] Could be depth column:{name}?')
+                    fout.write('\n')
+                    fout.write(name)
             return None
         fout.close()
 
-        row = {x: self.odv_df.loc[0].at[x] for x in self.mandatory_columns}
-        # try:
-        #     #index_chla = self.odv_df.columns.tolist().index('CPHLSEP1 [Milligrams per cubic metre]')
-        #     index_chla = self.odv_df.columns.tolist().index(chla_name)
-        # except:
-        #     print('[WARNING] CPHLSEP1 [Milligrams per cubic metre] is not available')
-        #     try:
-        #         index_chla = self.odv_df.columns.tolist().index('Chlorophyll a [mg/m3]')
-        #     except:
-        #         print('[WARNING] Chlorophyll a [mg/m3] is not available')
-        #         return None
 
         time_stamp_format = self.get_time_stamp_format_python(self.mandatory_columns[-1])
+        time_col_name = self.mandatory_columns[-1]
+        time_array_all = np.array(self.odv_df[time_col_name][:])
+        check_min_depth_for_valid = False
+        if isinstance(time_array_all[0],str) and time_array_all.shape[0]>1:
+            try:
+                tfloat = np.array(time_array_all[1:]).astype(np.float32)
+                nnan = np.count_nonzero(np.isnan(tfloat))
+                if nnan==time_array_all.shape[0]-1:
+                    check_min_depth_for_valid = True
+            except:
+                pass
+
+
+
         index_chla_qf = index_chla + 1
+        chla_col_name = col_names[index_chla]
+        chla_qf_col_name = col_names[index_chla_qf]
 
-        ##index_zero-DEPRECATED
-        # index_zero = self.odv_df.index[self.odv_df.loc[:,'ADEPZZ01 [Metres]']==0.0]
-        # index_zero = self.odv_df.index[self.odv_df.loc[:, depth_name] == 0.0]
-        # if len(index_zero) == 0:
-        #     print(f'[WARNING] No chl-a values were set to a depth of 0 metres')
-        #     return None
-        # index_zero = int(index_zero[0])
-
-        ##chloroplylll data with minimum depth
-
-
-        depth_valid = self.odv_df.loc[self.odv_df[col_names[index_chla]]>0,depth_name]
-        min_depth = np.min(depth_valid)
-        index_zero = self.odv_df.index[self.odv_df.loc[:, depth_name] == min_depth]
-        if len(index_zero) == 0:
-            print(f'[WARNING] No chl-a values were set to a depth of 0 metres')
-            return None
-        index_zero = int(index_zero[0])
-        chl_min_depth = self.odv_df.loc[self.odv_df[depth_name]==min_depth,col_names[index_chla]]
-        chl_min_depth = float(np.array(chl_min_depth)[0])
+        if check_min_depth_for_valid:
+            valid_all = np.zeros(self.odv_df[chla_col_name].shape)
+            index_min = np.argmin(self.odv_df[depth_name][:])
+            if isinstance(self.odv_df[chla_col_name][index_min],str) and self.odv_df[chla_col_name][index_min].find(',')>0:##strange case, but happen in a file
+                self.odv_df[chla_col_name][index_min] = float(self.odv_df[chla_col_name][index_min].replace(',','.'))
+            if self.odv_df[chla_col_name][index_min]>0 and 0 <= self.odv_df[depth_name][index_min] <= 5:
+                valid_all[index_min]=1
+                row = {x: np.array([self.odv_df.loc[0,x]]) for x in self.mandatory_columns}
+            else:
+                return None
+        else:
+            valid_chla = self.odv_df[chla_col_name]>0
+            valid_depth = np.logical_and(self.odv_df[depth_name]>=0,self.odv_df[depth_name]<=5)
+            valid_all = valid_chla*valid_depth
+            if np.sum(valid_all)>0:
+                row = {x: np.array(self.odv_df[x][valid_all==1]) for x in self.mandatory_columns}
+            else:
+                return None
 
 
-        # imin = depth_valid.iloc[amin].index
-        # print(len(depth_valid),'-->',amin,'==>',imin)
-        # print(depth_valid)
-        # print(amin,'--->',depth_valid.loc[amin])
 
-        row['chl-a'] = self.odv_df.iloc[index_zero].iat[index_chla]
-        print(min_depth,chl_min_depth,row['chl-a'])
-        row['depth-ref_chl-a'] = min_depth
-        row['QF_chl-a'] = self.odv_df.iloc[index_zero].iat[index_chla_qf]
+        row['chl-a'] = np.array(self.odv_df[chla_col_name][valid_all==1])
+        row['depth-ref_chl-a'] = np.array(self.odv_df[depth_name][valid_all==1])
+        row['QF_chl-a'] = np.array(self.odv_df[chla_qf_col_name][valid_all==1])
 
+        time_col_name = self.mandatory_columns[-1]
+        time_array = row[time_col_name][:]
 
         if time_stamp_format is not None and time_stamp_format != 'NODEF':
-            time_here = dt.strptime(row[self.mandatory_columns[-1]], time_stamp_format)
-            row['Datetime[UTC]'] = time_here.strftime('%Y-%m-%dT%H:%M:%S')
+            time_here = None
+            try:
+                time_here = np.array([dt.strptime(x, time_stamp_format).strftime('%Y-%m-%dT%H:%M:%S') for x in time_array])
+            except:##sometimes the format given in the units in the file does not correponds with data,manage exceptions here
+                formats = ['%Y-%m-%dT%H:%M','%Y-%m-%dT%H:%M:%S','%Y-%m-%d','%Y-%m-%dT%H:%MZ']
+                for f in formats:
+                    try:
+                        time_here = np.array([dt.strptime(x,f).strftime('%Y-%m-%dT%H:%M:%S') for x in time_array])
+                        break
+                    except:
+                        pass
+
+                #time_here = dt.strptime(row[self.mandatory_columns[-1]][0], '%Y-%m-%dT%H:%M')
+            if time_here is None:
+                print(f'[ERROR] Error with time format {time_array[0]}')
+                return None
+            #row['Datetime[UTC]'] = [time_here.strftime('%Y-%m-%dT%H:%M:%S')]
+            row['Datetime[UTC]'] = time_here
         else:
-            row['Datetime[UTC]'] = row[self.mandatory_columns[-1]]
-        del row[self.mandatory_columns[-1]]
+            row['Datetime[UTC]'] = time_array
+
+        del row[time_col_name]
+
+
+
         return row
 
         # print(depth,type(depth))
