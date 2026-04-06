@@ -916,7 +916,7 @@ def get_low_rrs(limits_str):
     from netCDF4 import Dataset
     # path_base = '/mnt/c/DATA'
     # dir_out = path_base
-    path_pase = '/store2/OC/OLCI//store2/OC/OLCI/daily_B4_v202602/'
+    path_base = '/store2/OC/OLCI//store2/OC/OLCI/daily_B4_v202602/'
     dir_out =  '/store/COP2-OC-TAC/COL4_LOW_RRS'
     work_date = dt(2026,2,26)
     end_date = dt(2026,4,5)
