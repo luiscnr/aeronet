@@ -1024,12 +1024,11 @@ def get_low_rrs(limits_str):
             nlow = np.count_nonzero(my_mask==2)
             nhigh = np.count_nonzero(my_mask==1)
 
-
-            check_400_high_rrs = rrs_var[my_mask==1]
-            # check_400_low_rrs = rrs_var[my_mask == 2]
-            # print('---->>',np.min(check_400_high_rrs),np.max(check_400_high_rrs))
-            # print('---->>', np.min(check_400_low_rrs), np.max(check_400_low_rrs))
-            max_high = np.max(check_400_high_rrs)
+            if nhigh>0:
+                check_400_high_rrs = rrs_var[my_mask==1]
+                max_high = np.max(check_400_high_rrs)
+            else:
+                max_high = 0
 
             print('Total:', ntotal, 'Low: ', nlow, 'High: ', nhigh, 'Max High: ',max_high)
             my_mask_array = my_mask[mask==False]
