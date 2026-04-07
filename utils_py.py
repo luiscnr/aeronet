@@ -911,13 +911,51 @@ def get_array_3x3(array_data,array_ref):
 
     return array_out,num_out
 
+def plot_spectra(path_base):
+    from matplotlib import pyplot as plt
+    from netCDF4 import Dataset
+    dir_out = path_base
+    work_date = dt(2026, 2, 26)
+    end_date = dt(2026, 4, 5)
+    while work_date <= end_date:
+        file_in = os.path.join(path_base, f'LowRRS_Spectra_{work_date.strftime("%Y%m%d")}.nc')
+        file_out = os.path.join(dir_out, f'LowRRS_Spectra_{work_date.strftime("%Y%m%d")}.tif')
+        if not os.path.exists(file_in):
+            work_date = work_date + timedelta(hours=24)
+            continue
+        dset = Dataset(file_in)
+        all_spectra = dset.variables['spectra'][:]
+        mask_array = dset.variables['my_mask_array'][:]
+        chl_spectra = dset.variables['chl_spectra'][:]
+        dset.close()
+
+        xdata = [400, 412.5, 442.5, 490, 510, 560, 665, 708.75, 753.75, 778.75, 865, 885]
+        spectra_high = all_spectra[mask_array==1,:].transpose()
+        spectra_low = all_spectra[mask_array==2,:].transpose()
+        h1=plt.plot(xdata,spectra_high,color='tab:blue',linestyle='-',linewidth=0.5,marker=None)
+        h2=plt.plot(xdata, spectra_low, color='tab:orange', linestyle='-', linewidth=0.5, marker=None)
+        plt.xlabel('Wavelength (nm)', fontsize=12)
+        plt.ylabel(r'R$_r$$_s$ (sr$^-$$^1$)')
+        plt.ylim(0, 0.008)
+        plt.legend([h1,h2],['HIGH_RRS','LOW_RRS'])
+        plt.savefig(file_out, dpi=300)
+        plt.close()
+
+        chl_spectra_high = chl_spectra[mask_array==1]
+        chl_spectra_low = chl_spectra[mask_array==2]
+        print(np.median(chl_spectra_high),np.percentile(chl_spectra_high,25),np.percentile(chl_spectra_high,75),np.mean(chl_spectra_high))
+        print(np.median(chl_spectra_low), np.percentile(chl_spectra_low, 25), np.percentile(chl_spectra_low, 75),
+              np.mean(chl_spectra_low))
+        work_date = work_date + timedelta(hours=24)
+
+    return True
 
 def get_low_rrs(limits_str):
     from netCDF4 import Dataset
-    # path_base = '/mnt/c/DATA'
-    # dir_out = path_base
-    path_base = '/store2/OC/OLCI/daily_B4_v202602/'
-    dir_out =  '/store/COP2-OC-TAC/COL4_LOW_RRS'
+    path_base = '/mnt/c/DATA'
+    dir_out = path_base
+    # path_base = '/store2/OC/OLCI/daily_B4_v202602/'
+    # dir_out =  '/store/COP2-OC-TAC/COL4_LOW_RRS'
     work_date = dt(2026,2,26)
     end_date = dt(2026,4,5)
     bands = [400, 412.5, 442.5, 490, 510, 560, 665, 708.75, 753.75, 778.75, 865, 885]
@@ -925,7 +963,7 @@ def get_low_rrs(limits_str):
     #limits = [30,40,7,17]
     limits = [float(x) for x in limits_str.split('_')]
     fw = open(os.path.join(dir_out,'SummaryLowRrs.csv'),'w')
-    fw.write('Date;NLowRrs;NInvalidChl')
+    fw.write('Date;NTotal;NHighRrs;NLowRrs;NInvalidChl')
     while work_date<=end_date:
         dir_date = os.path.join(path_base,work_date.strftime('%Y'),work_date.strftime('%j'))
         file_400 = os.path.join(dir_date,f'Oa{work_date.strftime("%Y")}{work_date.strftime("%j")}-rrs400-med-fr.nc')
@@ -973,33 +1011,37 @@ def get_low_rrs(limits_str):
             mask = rrs_var.mask
             ny = mask.shape[0]
             nx = mask.shape[1]
-            my_mask = np.ma.masked_all(mask.shape,np.int16)
-            my_mask[mask==False]=0
-            my_mask[np.logical_and(np.logical_and(rrs_var<0.002,rrs_var_510<0.0025),np.logical_and(dif_442_490<0.00025,dif_412_400>0))]=1
+            my_mask = np.ma.zeros(mask.shape).astype(np.int16)
+            my_mask[mask==False]=1
+            indices = np.where(np.logical_and(np.logical_and(rrs_var < 0.002, rrs_var_510 < 0.0025),
+                                              np.logical_and(dif_442_490 < 0.00025, dif_412_400 > 0)))
+            my_mask[indices]=2
             my_mask = np.ma.masked_equal(my_mask,0)
-            #print('my_mask',my_mask.size,np.ma.count(my_mask),np.ma.sum(my_mask))
-            lat_array_base = np.repeat(lat_array_base,nx).reshape((ny,nx))
-            lon_array_base = np.tile(lon_array_base,ny).reshape((ny,nx))
-            rrs_var = rrs_var[mask==False]
-            rrs_var_510 = rrs_var_510[mask==False]
-            dif_442_490 = dif_442_490[mask==False]
-            dif_412_400 = dif_412_400[mask==False]
-            # rrs_var_490 = rrs_var_490[mask==False]
-            # rrs_var_442 = rrs_var_442[mask==False]
-            # lat_array = lat_array_base[mask==False]
-            # lon_array = lon_array_base[mask==False]
-            indices = np.where(np.logical_and(np.logical_and(rrs_var<0.002,rrs_var_510<0.0025),np.logical_and(dif_442_490<0.00025,dif_412_400>0)))
-            ndata = len(indices[0])
+            # lat_array_base = np.repeat(lat_array_base,nx).reshape((ny,nx))
+            # lon_array_base = np.tile(lon_array_base,ny).reshape((ny,nx))
 
-            print('ndata -->',ndata)
-            if ndata==0:
+            ntotal = np.ma.count(my_mask)
+            nlow = np.count_nonzero(my_mask==2)
+            nhigh = np.count_nonzero(my_mask==1)
+
+
+            check_400_high_rrs = rrs_var[my_mask==1]
+            # check_400_low_rrs = rrs_var[my_mask == 2]
+            # print('---->>',np.min(check_400_high_rrs),np.max(check_400_high_rrs))
+            # print('---->>', np.min(check_400_low_rrs), np.max(check_400_low_rrs))
+            max_high = np.max(check_400_high_rrs)
+
+            print('Total:', ntotal, 'Low: ', nlow, 'High: ', nhigh, 'Max High: ',max_high)
+            my_mask_array = my_mask[mask==False]
+            #print(my_mask_array.shape,np.unique(my_mask_array))
+
+            if nlow==0 or max_high<0.008:
                 fw.write('\n')
                 fw.write(f'{work_date.strftime("%Y-%m-%d")};0;0')
                 work_date = work_date + timedelta(hours=24)
                 continue
-            # lat_array = lat_array[indices]
-            # lon_array = lon_array[indices]
-            array = np.zeros((ndata,nbands))
+
+            spectra = np.zeros((ntotal,nbands))
             file_out = os.path.join(dir_out,f'LowRRS_Spectra_{work_date.strftime("%Y%m%d")}.nc')
             for iband,band in enumerate(bands):
                 strband = f'{band}'
@@ -1009,41 +1051,51 @@ def get_low_rrs(limits_str):
                 rrs_var_here = dset.variables[f'RRS{strband}'][0,y_min:y_max,x_min:x_max]
                 dset.close()
                 rrs_var_here = rrs_var_here[mask == False]
-                rrs_var_here = rrs_var_here[indices]
-                array[:,iband] = rrs_var_here[:]
+                print(band,rrs_var_here.shape)
+                #rrs_var_here = rrs_var_here[indices]
+                spectra[:,iband] = rrs_var_here[:]
 
             file_chl = os.path.join(dir_date,f'O{work_date.strftime("%Y")}{work_date.strftime("%j")}-chl-med-fr.nc')
             dchl = Dataset(file_chl)
-            chl_array = dchl.variables['CHL'][0,y_min:y_max,x_min:x_max]
-            chl_here = chl_array[mask == False]
-            chl_here = chl_here[indices]
-            print('invalid chl',np.ma.count_masked(chl_here))
+            chl_map = dchl.variables['CHL'][0,y_min:y_max,x_min:x_max]
+            chl_spectra = chl_map[mask == False]
+            chl_check = chl_map[indices]
+            print('invalid chl',np.ma.count_masked(chl_check))
             dchl.close()
 
             fw.write('\n')
-            fw.write(f'{work_date.strftime("%Y-%m-%d")};{ndata};{np.ma.count_masked(chl_here)}')
+            fw.write(f'{work_date.strftime("%Y-%m-%d")};{ntotal};{nhigh};{nlow};{np.ma.count_masked(chl_check)}')
 
             ncout = Dataset(file_out,'w')
-            ncout.createDimension('data',array.shape[0])
-            ncout.createDimension('bands',array.shape[1])
+            ncout.createDimension('data',spectra.shape[0])
+            ncout.createDimension('bands',spectra.shape[1])
             ncout.createDimension('lat',ny)
             ncout.createDimension('lon',nx)
             ncout.createVariable('spectra','f4',('data','bands'),zlib = True,complevel=6,fill_value=-999.0)
             ncout.createVariable('chl_spectra','f4',('data',),zlib=True,complevel=6,fill_value=-999.0)
-            ncout.createVariable('lat','f4',('lat','lon'),zlib=True,complevel=6)
-            ncout.createVariable('lon', 'f4', ('lat','lon'), zlib=True, complevel=6)
-            ncout.createVariable('invalid','i2',('lat','lon'),zlib=True,complevel=6,fill_value=-999)
-            ncout.variables['spectra'][:] = array[:]
+            ncout.createVariable('lat','f4',('lat',),zlib=True,complevel=6)
+            ncout.createVariable('lon', 'f4', ('lon',), zlib=True, complevel=6)
+            ncout.createVariable('my_mask','i2',('lat','lon'),zlib=True,complevel=6,fill_value=-999)
+            ncout.createVariable('my_mask_array', 'i2', ('data',), zlib=True, complevel=6, fill_value=-999)
+            ncout.createVariable('chl_map', 'f4', ('lat', 'lon'), zlib=True, complevel=6, fill_value=-999)
+            ncout.variables['spectra'][:] = spectra[:]
             ncout.variables['lat'][:] = lat_array_base[:]
             ncout.variables['lon'][:] = lon_array_base[:]
-            ncout.variables['invalid'][:] = my_mask[:]
-            ncout.variables['chl_spectra'][:] = chl_here[:]
+            ncout.variables['my_mask'][:] = my_mask[:]
+            ncout.variables['my_mask'].flag_list = [1,2]
+            ncout.variables['my_mask'].flag_meanings = "HIGH_RRS LOW_RRS"
+            ncout.variables['my_mask_array'][:] = my_mask_array[:]
+            ncout.variables['my_mask_array'].flag_list = [1, 2]
+            ncout.variables['my_mask_array'].flag_meanings = "HIGH_RRS LOW_RRS"
+            ncout.variables['chl_spectra'][:] = chl_spectra[:]
+            ncout.variables['chl_map'][:] = chl_map[:]
             ncout.close()
             # for lat_p,lon_p in zip(lat_array,lon_array):
             #     print(lat_p,lon_p)
         work_date = work_date + timedelta(hours=24)
     fw.close()
     return True
+
 def main():
     # if make_maps_from_csv_3():
     #     return
@@ -1053,6 +1105,8 @@ def main():
     if get_low_rrs(args.input):
         return True
 
+    # if plot_spectra(args.input):
+    #     return True
 
     print('[INFO] Started')
 
