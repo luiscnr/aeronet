@@ -952,10 +952,10 @@ def plot_spectra(path_base):
 
 def get_low_rrs(limits_str):
     from netCDF4 import Dataset
-    path_base = '/mnt/c/DATA'
-    dir_out = path_base
-    # path_base = '/store2/OC/OLCI/daily_B4_v202602/'
-    # dir_out =  '/store/COP2-OC-TAC/COL4_LOW_RRS'
+    # path_base = '/mnt/c/DATA'
+    # dir_out = path_base
+    path_base = '/store2/OC/OLCI/daily_B4_v202602/'
+    dir_out =  '/store/COP2-OC-TAC/COL4_LOW_RRS'
     work_date = dt(2026,2,26)
     end_date = dt(2026,4,5)
     bands = [400, 412.5, 442.5, 490, 510, 560, 665, 708.75, 753.75, 778.75, 865, 885]
